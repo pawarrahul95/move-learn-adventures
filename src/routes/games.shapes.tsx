@@ -1,6 +1,7 @@
 // Shape Detective — child shows a real object; we threshold the camera frame,
 // trace the largest contour, and approximate corners with Douglas-Peucker.
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useCamera } from "@/lib/use-camera";
 import { useProfiles } from "@/lib/use-profiles";
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/games/shapes")({
 });
 
 type ShapeName = "triangle" | "square" | "circle";
-const SHAPES: { name: ShapeName; emoji: string; svg: JSX.Element }[] = [
+const SHAPES: { name: ShapeName; emoji: string; svg: ReactNode }[] = [
   {
     name: "triangle",
     emoji: "🔺",
