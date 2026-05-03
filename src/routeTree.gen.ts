@@ -9,15 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TvRouteImport } from './routes/tv'
 import { Route as PlayRouteImport } from './routes/play'
+import { Route as CamRouteImport } from './routes/cam'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GamesShapesRouteImport } from './routes/games.shapes'
 import { Route as GamesColorsRouteImport } from './routes/games.colors'
 import { Route as GamesAlphabetRouteImport } from './routes/games.alphabet'
 
+const TvRoute = TvRouteImport.update({
+  id: '/tv',
+  path: '/tv',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlayRoute = PlayRouteImport.update({
   id: '/play',
   path: '/play',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CamRoute = CamRouteImport.update({
+  id: '/cam',
+  path: '/cam',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,14 +55,18 @@ const GamesAlphabetRoute = GamesAlphabetRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cam': typeof CamRoute
   '/play': typeof PlayRoute
+  '/tv': typeof TvRoute
   '/games/alphabet': typeof GamesAlphabetRoute
   '/games/colors': typeof GamesColorsRoute
   '/games/shapes': typeof GamesShapesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cam': typeof CamRoute
   '/play': typeof PlayRoute
+  '/tv': typeof TvRoute
   '/games/alphabet': typeof GamesAlphabetRoute
   '/games/colors': typeof GamesColorsRoute
   '/games/shapes': typeof GamesShapesRoute
@@ -58,7 +74,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cam': typeof CamRoute
   '/play': typeof PlayRoute
+  '/tv': typeof TvRoute
   '/games/alphabet': typeof GamesAlphabetRoute
   '/games/colors': typeof GamesColorsRoute
   '/games/shapes': typeof GamesShapesRoute
@@ -67,16 +85,27 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cam'
     | '/play'
+    | '/tv'
     | '/games/alphabet'
     | '/games/colors'
     | '/games/shapes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/play' | '/games/alphabet' | '/games/colors' | '/games/shapes'
+  to:
+    | '/'
+    | '/cam'
+    | '/play'
+    | '/tv'
+    | '/games/alphabet'
+    | '/games/colors'
+    | '/games/shapes'
   id:
     | '__root__'
     | '/'
+    | '/cam'
     | '/play'
+    | '/tv'
     | '/games/alphabet'
     | '/games/colors'
     | '/games/shapes'
@@ -84,7 +113,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CamRoute: typeof CamRoute
   PlayRoute: typeof PlayRoute
+  TvRoute: typeof TvRoute
   GamesAlphabetRoute: typeof GamesAlphabetRoute
   GamesColorsRoute: typeof GamesColorsRoute
   GamesShapesRoute: typeof GamesShapesRoute
@@ -92,11 +123,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tv': {
+      id: '/tv'
+      path: '/tv'
+      fullPath: '/tv'
+      preLoaderRoute: typeof TvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/play': {
       id: '/play'
       path: '/play'
       fullPath: '/play'
       preLoaderRoute: typeof PlayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cam': {
+      id: '/cam'
+      path: '/cam'
+      fullPath: '/cam'
+      preLoaderRoute: typeof CamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -132,7 +177,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CamRoute: CamRoute,
   PlayRoute: PlayRoute,
+  TvRoute: TvRoute,
   GamesAlphabetRoute: GamesAlphabetRoute,
   GamesColorsRoute: GamesColorsRoute,
   GamesShapesRoute: GamesShapesRoute,
