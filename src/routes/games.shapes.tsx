@@ -293,10 +293,10 @@ function ShapeGame() {
           </span>
         </div>
 
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-4xl bg-black shadow-cartoon">
+        <div className="tv-stage-wrap relative aspect-[4/3] w-full overflow-hidden rounded-4xl bg-black shadow-cartoon">
           <video
             ref={videoRef}
-            className="absolute inset-0 h-full w-full object-cover"
+            className="tv-cam-video absolute inset-0 h-full w-full object-cover"
             playsInline
             muted
           />

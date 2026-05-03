@@ -256,14 +256,15 @@ function AlphabetGame() {
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-3 sm:px-6">
         <div
           ref={wrapRef}
-          className="relative aspect-[4/3] w-full overflow-hidden rounded-4xl bg-black shadow-cartoon"
+          className="tv-stage-wrap relative aspect-[4/3] w-full overflow-hidden rounded-4xl bg-black shadow-cartoon"
         >
           <video
             ref={videoRef}
-            className="absolute inset-0 h-full w-full -scale-x-100 object-cover"
+            className="tv-cam-video absolute inset-0 h-full w-full -scale-x-100 object-cover"
             playsInline
             muted
           />
+          <span className="tv-cam-badge hidden">📹 You</span>
           <canvas ref={overlayRef} className="absolute inset-0 h-full w-full" />
 
           {error && (
