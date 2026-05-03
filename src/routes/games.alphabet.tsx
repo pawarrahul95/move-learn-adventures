@@ -269,7 +269,9 @@ function AlphabetGame() {
   const reset = () => {
     targetRef.current.forEach((p) => (p.hit = false));
     trailRef.current = [];
+    coverageRef.current = 0;
     setCoverage(0);
+    celebrateRef.current = false;
   };
 
   return (
@@ -279,18 +281,23 @@ function AlphabetGame() {
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-3 sm:px-6">
         <div
           ref={wrapRef}
-          className="tv-stage-wrap relative aspect-[4/3] w-full overflow-hidden rounded-4xl bg-black shadow-cartoon"
+          className="tv-stage-wrap relative aspect-[4/3] w-full touch-none select-none overflow-hidden rounded-4xl bg-black shadow-cartoon"
         >
-          <video
-            ref={videoRef}
-            className="tv-cam-video absolute inset-0 h-full w-full -scale-x-100 object-cover"
-            playsInline
-            muted
-          />
+          {!remote && (
+            <video
+              ref={videoRef}
+              className="tv-cam-video absolute inset-0 h-full w-full -scale-x-100 object-cover"
+              playsInline
+              muted
+            />
+          )}
+          {remote && (
+            <div className="absolute inset-0 bg-gradient-celebration" aria-hidden />
+          )}
           <span className="tv-cam-badge hidden">📹 You</span>
           <canvas ref={overlayRef} className="absolute inset-0 h-full w-full" />
 
-          {error && (
+          {error && !remote && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-6 text-center text-white">
               <div>
                 <p className="text-display text-2xl font-bold">Camera needed</p>
@@ -298,9 +305,14 @@ function AlphabetGame() {
               </div>
             </div>
           )}
-          {!error && (!ready || !modelReady) && (
+          {!error && !remote && (!ready || !modelReady) && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white">
               <CenterMessage title="Getting ready…" sub="Loading the magic camera" />
+            </div>
+          )}
+          {remote && !modelReady && (
+            <div className="absolute inset-0 flex items-center justify-center text-white">
+              <CenterMessage title="Waiting for phone…" sub="Open the camera page on your phone." />
             </div>
           )}
 
