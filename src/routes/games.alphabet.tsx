@@ -4,7 +4,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useCamera } from "@/lib/use-camera";
-import { getHandLandmarker } from "@/lib/mediapipe";
+import { useFingertip } from "@/lib/use-fingertip";
+import { tvStatus } from "@/routes/tv";
 import { useProfiles } from "@/lib/use-profiles";
 import { addLetter, addStars, getActiveProfileId } from "@/lib/profiles";
 import { GameTopBar } from "@/components/GameTopBar";
