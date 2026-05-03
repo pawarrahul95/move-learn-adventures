@@ -28,7 +28,7 @@ const tvBus: { listeners: Set<Listener>; status: PairStatus } = {
 
 export function tvSubscribe(cb: Listener) {
   tvBus.listeners.add(cb);
-  return () => tvBus.listeners.delete(cb);
+  return () => { tvBus.listeners.delete(cb); };
 }
 export function tvStatus() { return tvBus.status; }
 

@@ -37,7 +37,7 @@ export function useFingertip({ mode, video, ready }: Opts) {
     return tvSubscribe((m) => {
       if (m.t !== "hand") return;
       setTip({ x: m.x, y: m.y, present: m.present, ts: m.ts });
-    }) as unknown as () => void;
+    });
   }, [mode]);
 
   // Local: run hand tracking against the page's own video element.
