@@ -87,25 +87,42 @@ function AlphabetGame() {
   const [letterIdx, setLetterIdx] = useState(0);
   const letter = LETTERS[letterIdx];
 
-  const { videoRef, ready, error } = useCamera(true, "user");
+  // If a phone is paired via /tv, source landmarks from there and skip the
+  // local webcam entirely. Otherwise use the page's own camera.
+  const remote = tvStatus().kind === "paired";
+  const { videoRef, ready, error } = useCamera(!remote, "user");
+  const { tip, modelReady } = useFingertip({
+    mode: remote ? "remote" : "local",
+    video: videoRef.current,
+    ready,
+  });
+
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
   const targetRef = useRef<{ x: number; y: number; hit: boolean }[]>([]);
   const trailRef = useRef<{ x: number; y: number }[]>([]);
   const fingertipRef = useRef<{ x: number; y: number } | null>(null);
+  const coverageRef = useRef(0);
 
+  // Coverage updates UI ~5x/sec via rAF tick — avoids React renders per frame.
   const [coverage, setCoverage] = useState(0);
   const [celebrate, setCelebrate] = useState(false);
-  const [modelReady, setModelReady] = useState(false);
+  const celebrateRef = useRef(false);
 
   // Resize canvas to wrapper, recompute target points for current letter.
   const resizeAndReset = useCallback(() => {
     const c = overlayRef.current, wrap = wrapRef.current;
     if (!c || !wrap) return;
     const rect = wrap.getBoundingClientRect();
-    c.width = rect.width;
-    c.height = rect.height;
+    // Use device pixel ratio for crisp lines without re-layouting.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = Math.round(rect.width * dpr);
+    c.height = Math.round(rect.height * dpr);
+    c.style.width = `${rect.width}px`;
+    c.style.height = `${rect.height}px`;
+    const ctx = c.getContext("2d");
+    ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
     // Letter is drawn into a centered square padded box.
     const pad = Math.min(rect.width, rect.height) * 0.1;
     const size = Math.min(rect.width, rect.height) - pad * 2;
@@ -117,6 +134,7 @@ function AlphabetGame() {
       hit: false,
     }));
     trailRef.current = [];
+    coverageRef.current = 0;
     setCoverage(0);
   }, [letter]);
 
@@ -128,115 +146,119 @@ function AlphabetGame() {
 
   useEffect(() => {
     speak(`Trace the letter ${letter}`);
+    celebrateRef.current = false;
+    setCelebrate(false);
   }, [letter]);
 
-  // Detection + render loop
+  // Stash latest fingertip (normalized) in a ref so the rAF loop has access
+  // without re-running the effect every detection.
+  const tipRef = useRef(tip);
+  tipRef.current = tip;
+
+  // Render loop. Reads fingertip from tipRef, paints, marks hits.
   useEffect(() => {
-    if (!ready) return;
     let raf = 0;
     let running = true;
-    let landmarker: Awaited<ReturnType<typeof getHandLandmarker>> | null = null;
+    let lastUiSync = 0;
 
-    (async () => {
-      landmarker = await getHandLandmarker();
-      setModelReady(true);
+    const tick = () => {
+      if (!running) return;
+      const c = overlayRef.current;
+      if (c) {
+        const ctx = c.getContext("2d");
+        const rect = wrapRef.current?.getBoundingClientRect();
+        if (ctx && rect) {
+          ctx.clearRect(0, 0, rect.width, rect.height);
 
-      const tick = () => {
-        if (!running) return;
-        const v = videoRef.current;
-        const c = overlayRef.current;
-        if (v && c && v.readyState >= 2 && landmarker) {
-          const ctx = c.getContext("2d");
-          if (ctx) {
-            ctx.clearRect(0, 0, c.width, c.height);
+          // Draw target letter dots
+          const pts = targetRef.current;
+          for (const p of pts) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = p.hit ? "#22c55e" : "rgba(255,255,255,0.85)";
+            ctx.strokeStyle = p.hit ? "#15803d" : "#1e293b";
+            ctx.lineWidth = 2;
+            ctx.fill();
+            ctx.stroke();
+          }
 
-            // Draw target letter dots
-            const pts = targetRef.current;
+          // Project current fingertip onto canvas. Mirror X to match selfie view.
+          const t = tipRef.current;
+          if (t.present) {
+            const x = (1 - t.x) * rect.width;
+            const y = t.y * rect.height;
+            fingertipRef.current = { x, y };
+            trailRef.current.push({ x, y });
+            if (trailRef.current.length > 60) trailRef.current.shift();
+            const r = 36;
             for (const p of pts) {
-              ctx.beginPath();
-              ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-              ctx.fillStyle = p.hit ? "#22c55e" : "rgba(255,255,255,0.85)";
-              ctx.strokeStyle = p.hit ? "#15803d" : "#1e293b";
-              ctx.lineWidth = 2;
-              ctx.fill();
-              ctx.stroke();
+              if (!p.hit && (p.x - x) ** 2 + (p.y - y) ** 2 < r * r) p.hit = true;
             }
+          } else {
+            fingertipRef.current = null;
+          }
 
-            // Detect hand
-            try {
-              const res = landmarker.detectForVideo(v, performance.now());
-              if (res.landmarks && res.landmarks.length > 0) {
-                const tip = res.landmarks[0][8]; // index fingertip
-                // Mirror X because video is mirrored for selfie view.
-                const x = (1 - tip.x) * c.width;
-                const y = tip.y * c.height;
-                fingertipRef.current = { x, y };
-                trailRef.current.push({ x, y });
-                if (trailRef.current.length > 60) trailRef.current.shift();
+          // Draw trail
+          const trail = trailRef.current;
+          if (trail.length > 1) {
+            ctx.lineWidth = 14;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.strokeStyle = "rgba(255, 110, 90, 0.85)";
+            ctx.beginPath();
+            ctx.moveTo(trail[0].x, trail[0].y);
+            for (let i = 1; i < trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
+            ctx.stroke();
+          }
 
-                // Mark target points within radius as hit
-                const r = 36;
-                for (const p of pts) {
-                  if (!p.hit && (p.x - x) ** 2 + (p.y - y) ** 2 < r * r) p.hit = true;
-                }
-              } else {
-                fingertipRef.current = null;
-              }
-            } catch {
-              /* skip frame */
-            }
+          // Fingertip cursor
+          if (fingertipRef.current) {
+            const { x, y } = fingertipRef.current;
+            ctx.beginPath();
+            ctx.arc(x, y, 18, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255,255,255,0.4)";
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x, y, 9, 0, Math.PI * 2);
+            ctx.fillStyle = "#ff6b6b";
+            ctx.fill();
+          }
 
-            // Draw trail
-            const trail = trailRef.current;
-            if (trail.length > 1) {
-              ctx.lineWidth = 14;
-              ctx.lineCap = "round";
-              ctx.lineJoin = "round";
-              ctx.strokeStyle = "rgba(255, 110, 90, 0.85)";
-              ctx.beginPath();
-              ctx.moveTo(trail[0].x, trail[0].y);
-              for (let i = 1; i < trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
-              ctx.stroke();
-            }
+          // Compute coverage from cached hit count
+          let hit = 0;
+          for (const p of pts) if (p.hit) hit++;
+          const total = pts.length || 1;
+          const cov = hit / total;
+          coverageRef.current = cov;
 
-            // Fingertip cursor
-            if (fingertipRef.current) {
-              const { x, y } = fingertipRef.current;
-              ctx.beginPath();
-              ctx.arc(x, y, 18, 0, Math.PI * 2);
-              ctx.fillStyle = "rgba(255,255,255,0.4)";
-              ctx.fill();
-              ctx.beginPath();
-              ctx.arc(x, y, 9, 0, Math.PI * 2);
-              ctx.fillStyle = "#ff6b6b";
-              ctx.fill();
-            }
-
-            const hit = pts.filter((p) => p.hit).length;
-            const total = pts.length || 1;
-            const cov = hit / total;
+          // Throttle UI sync to ~5 Hz to avoid React re-render churn.
+          const now = performance.now();
+          if (now - lastUiSync > 200) {
+            lastUiSync = now;
             setCoverage(cov);
-            if (cov >= 0.85 && !celebrate) {
-              running = false;
-              if (active) {
-                addLetter(active.id, letter);
-                addStars(active.id, 1);
-              }
-              sfx.success();
-              setCelebrate(true);
+          }
+
+          if (cov >= 0.85 && !celebrateRef.current) {
+            celebrateRef.current = true;
+            running = false;
+            if (active) {
+              addLetter(active.id, letter);
+              addStars(active.id, 1);
             }
+            sfx.success();
+            setCelebrate(true);
           }
         }
-        raf = requestAnimationFrame(tick);
-      };
-      tick();
-    })();
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
 
     return () => {
       running = false;
       cancelAnimationFrame(raf);
     };
-  }, [ready, letter, active, celebrate, videoRef]);
+  }, [letter, active]);
 
   const next = () => {
     setCelebrate(false);
