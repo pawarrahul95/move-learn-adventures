@@ -65,9 +65,14 @@ function PlayPage() {
             </div>
           </div>
         </div>
-        <Link to="/" onClick={() => setActiveProfileId(null)}>
-          <KidButton variant="white" size="md">Switch Player</KidButton>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to="/tv">
+            <KidButton variant="berry" size="md">📺 Cast to TV</KidButton>
+          </Link>
+          <Link to="/" onClick={() => setActiveProfileId(null)}>
+            <KidButton variant="white" size="md">Switch Player</KidButton>
+          </Link>
+        </div>
       </header>
 
       <section className="mx-auto max-w-5xl px-4 pb-12 pt-4 sm:px-6">
