@@ -182,17 +182,17 @@ function ColorGame() {
           />
         </div>
 
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-4xl bg-black shadow-cartoon">
+        <div className="tv-stage-wrap relative aspect-[4/3] w-full overflow-hidden rounded-4xl bg-black shadow-cartoon">
           <video
             ref={videoRef}
-            className="absolute inset-0 h-full w-full object-cover"
+            className="tv-cam-video absolute inset-0 h-full w-full object-cover"
             playsInline
             muted
           />
           <canvas ref={canvasRef} className="hidden" />
 
           {/* Center crosshair box */}
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="tv-hide-in-tv pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="h-1/2 w-1/2 rounded-3xl border-4 border-dashed border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]" />
           </div>
 

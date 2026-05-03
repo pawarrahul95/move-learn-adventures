@@ -183,3 +183,50 @@
   .shadow-cartoon { box-shadow: var(--shadow-cartoon); }
   .shadow-pop { box-shadow: var(--shadow-pop); }
 }
+
+/* --------- TV / Cast mode ---------
+ * When .tv-mode is on <html>:
+ *  - The game stage becomes wide (16:9) with a bright backdrop, like a TV.
+ *  - The camera video shrinks to a corner Picture-in-Picture thumbnail.
+ *  - Overlay canvases keep filling the stage so gameplay (letters, dots,
+ *    fingertip cursor, contour lines) stays huge and visible across the room.
+ *  - The host page hides scrollbars and uses the full viewport so when the
+ *    phone is mirrored to a TV, gameplay fills the screen edge-to-edge.
+ */
+.tv-mode body { overflow: hidden; }
+.tv-mode .tv-stage-wrap {
+  aspect-ratio: 16 / 9 !important;
+  background: var(--gradient-celebration) !important;
+  max-height: calc(100dvh - 6rem);
+}
+.tv-mode .tv-cam-video {
+  position: absolute !important;
+  inset: auto 0.75rem 0.75rem auto !important;
+  width: 26% !important;
+  height: 30% !important;
+  border-radius: 1rem;
+  border: 4px solid white;
+  box-shadow: var(--shadow-pop);
+  object-fit: cover;
+  z-index: 5;
+}
+.tv-mode .tv-cam-badge {
+  position: absolute;
+  right: 0.75rem;
+  bottom: calc(0.75rem + 30% - 1.6rem);
+  z-index: 6;
+  background: rgba(255,255,255,0.95);
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+/* Hide center crosshair guide in TV mode — feels intrusive on the big screen */
+.tv-mode .tv-hide-in-tv { display: none !important; }
+/* Make in-stage status pills bigger so they read across the room */
+.tv-mode .tv-stage-wrap .tv-pill {
+  font-size: 1.25rem !important;
+  padding: 0.5rem 1rem !important;
+}
