@@ -74,10 +74,11 @@ function ColorGame() {
         if (ctx) {
           ctx.drawImage(v, 0, 0, W, H);
           const img = ctx.getImageData(0, 0, W, H);
-          const seg = segmentObject(img.data, W, H);
+          const seg = segmentObjectGray(img.data, W, H);
+          const segColor = seg.bbox ? dominantColor(img.data, seg.mask, W, H) : null;
 
           // Smooth: confirm across last 3 frames
-          recentRef.current.push(seg.color);
+          recentRef.current.push(segColor);
           if (recentRef.current.length > 3) recentRef.current.shift();
           const counts: Record<string, number> = {};
           for (const r of recentRef.current) if (r) counts[r] = (counts[r] || 0) + 1;
