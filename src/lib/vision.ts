@@ -179,6 +179,136 @@ export function segmentObject(
   };
 }
 
+// ---------------- grayscale / Otsu / edge-based foreground ----------------
+// OpenCV-style pipeline in pure JS:
+//   gray -> 3x3 blur -> Otsu threshold -> auto-invert so foreground=1
+//   -> erode+dilate -> largest connected component (preferring center).
+// Returns mask + bbox of the single main object only.
+export function segmentObjectGray(
+  data: Uint8ClampedArray, W: number, H: number,
+): { mask: Uint8Array; bbox: BBox | null; pixelCount: number; vertices: number; area: number } {
+  const N = W * H;
+  const gray = new Uint8Array(N);
+  for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+    // Rec. 601 luma
+    gray[j] = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) | 0;
+  }
+
+  // 3x3 box blur (Gaussian-ish, very fast)
+  const blur = new Uint8Array(N);
+  for (let y = 1; y < H - 1; y++) {
+    for (let x = 1; x < W - 1; x++) {
+      const i = y * W + x;
+      blur[i] = (
+        gray[i - W - 1] + gray[i - W] + gray[i - W + 1] +
+        gray[i - 1]     + gray[i]     + gray[i + 1] +
+        gray[i + W - 1] + gray[i + W] + gray[i + W + 1]
+      ) / 9 | 0;
+    }
+  }
+  // Borders
+  for (let x = 0; x < W; x++) { blur[x] = gray[x]; blur[(H - 1) * W + x] = gray[(H - 1) * W + x]; }
+  for (let y = 0; y < H; y++) { blur[y * W] = gray[y * W]; blur[y * W + W - 1] = gray[y * W + W - 1]; }
+
+  // Otsu threshold
+  const hist = new Uint32Array(256);
+  for (let j = 0; j < N; j++) hist[blur[j]]++;
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+  let sumB = 0, wB = 0, maxVar = -1, threshold = 127;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (!wB) continue;
+    const wF = N - wB;
+    if (!wF) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const v = wB * wF * (mB - mF) * (mB - mF);
+    if (v > maxVar) { maxVar = v; threshold = t; }
+  }
+
+  // Decide foreground polarity: sample border pixels — they are background.
+  let borderSum = 0, borderN = 0;
+  for (let x = 0; x < W; x++) { borderSum += blur[x] + blur[(H - 1) * W + x]; borderN += 2; }
+  for (let y = 1; y < H - 1; y++) { borderSum += blur[y * W] + blur[y * W + W - 1]; borderN += 2; }
+  const borderMean = borderSum / borderN;
+  // If border (background) is brighter than threshold -> foreground = darker (<= threshold)
+  const fgIsDark = borderMean > threshold;
+
+  const mask = new Uint8Array(N);
+  for (let j = 0; j < N; j++) {
+    const v = blur[j];
+    mask[j] = (fgIsDark ? v < threshold : v > threshold) ? 1 : 0;
+  }
+
+  // Erode then dilate (open) to remove noise
+  const tmp = new Uint8Array(N);
+  for (let y = 1; y < H - 1; y++) {
+    for (let x = 1; x < W - 1; x++) {
+      const i = y * W + x;
+      tmp[i] = mask[i] && mask[i - 1] && mask[i + 1] && mask[i - W] && mask[i + W] ? 1 : 0;
+    }
+  }
+  for (let y = 1; y < H - 1; y++) {
+    for (let x = 1; x < W - 1; x++) {
+      const i = y * W + x;
+      mask[i] = tmp[i] || tmp[i - 1] || tmp[i + 1] || tmp[i - W] || tmp[i + W] ? 1 : 0;
+    }
+  }
+
+  // Connected components — pick largest blob, preferring ones not glued to all four borders
+  const labels = new Int32Array(N);
+  const stack: number[] = [];
+  let bestLabel = 0, bestScore = 0, bestSize = 0;
+  let bestMinX = 0, bestMinY = 0, bestMaxX = 0, bestMaxY = 0;
+  let nextLbl = 1;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const start = y * W + x;
+      if (!mask[start] || labels[start]) continue;
+      const lbl = nextLbl++;
+      stack.push(start);
+      labels[start] = lbl;
+      let count = 0, minX = x, minY = y, maxX = x, maxY = y;
+      while (stack.length) {
+        const i = stack.pop()!;
+        const px = i % W, py = (i / W) | 0;
+        count++;
+        if (px < minX) minX = px; if (py < minY) minY = py;
+        if (px > maxX) maxX = px; if (py > maxY) maxY = py;
+        if (px > 0     && mask[i - 1] && !labels[i - 1])  { labels[i - 1] = lbl; stack.push(i - 1); }
+        if (px < W - 1 && mask[i + 1] && !labels[i + 1])  { labels[i + 1] = lbl; stack.push(i + 1); }
+        if (py > 0     && mask[i - W] && !labels[i - W])  { labels[i - W] = lbl; stack.push(i - W); }
+        if (py < H - 1 && mask[i + W] && !labels[i + W])  { labels[i + W] = lbl; stack.push(i + W); }
+      }
+      // Penalize blobs that touch all 4 borders (likely background flooded in)
+      const touchesAll =
+        minX === 0 && minY === 0 && maxX === W - 1 && maxY === H - 1;
+      const score = touchesAll ? count * 0.05 : count;
+      if (score > bestScore) {
+        bestScore = score; bestSize = count; bestLabel = lbl;
+        bestMinX = minX; bestMinY = minY; bestMaxX = maxX; bestMaxY = maxY;
+      }
+    }
+  }
+
+  if (bestSize < N * 0.012) {
+    return { mask: new Uint8Array(N), bbox: null, pixelCount: 0, vertices: 0, area: 0 };
+  }
+
+  const out = new Uint8Array(N);
+  for (let j = 0; j < N; j++) if (labels[j] === bestLabel) out[j] = 1;
+
+  return {
+    mask: out,
+    bbox: { x: bestMinX, y: bestMinY, w: bestMaxX - bestMinX + 1, h: bestMaxY - bestMinY + 1 },
+    pixelCount: bestSize,
+    vertices: 0,
+    area: bestSize,
+  };
+}
+
 // ---------------- contour ----------------
 export function traceContour(mask: Uint8Array, W: number, H: number, bbox: BBox): Pt[] {
   // Find first foreground pixel in bbox
@@ -233,18 +363,26 @@ export function rdp(points: Pt[], epsilon: number): Pt[] {
   return [points[0], points[points.length - 1]];
 }
 
-export function classifyShape(contour: Pt[], bbox: BBox): ShapeName | null {
-  if (contour.length < 30) return null;
+export function classifyShape(
+  contour: Pt[],
+  bbox: BBox,
+): { shape: ShapeName | null; vertices: number; circularity: number } {
+  const empty = { shape: null, vertices: 0, circularity: 0 };
+  if (contour.length < 30) return empty;
   const bw = bbox.w, bh = bbox.h;
-  if (bw < 24 || bh < 24) return null;
+  if (bw < 24 || bh < 24) return empty;
 
   let peri = 0;
   for (let i = 1; i < contour.length; i++) {
     peri += Math.hypot(contour[i].x - contour[i - 1].x, contour[i].y - contour[i - 1].y);
   }
-  const eps = 0.035 * peri;
-  const poly = rdp(contour, eps);
-  const corners = poly.length - 1;
+  // approxPolyDP — sweep epsilon to land on a stable vertex count
+  let poly = rdp(contour, 0.04 * peri);
+  let corners = poly.length - 1;
+  if (corners > 10) {
+    poly = rdp(contour, 0.06 * peri);
+    corners = poly.length - 1;
+  }
 
   let area = 0;
   for (let i = 0; i < contour.length - 1; i++) {
@@ -254,14 +392,36 @@ export function classifyShape(contour: Pt[], bbox: BBox): ShapeName | null {
   const circ = (4 * Math.PI * area) / (peri * peri || 1);
   const aspect = bw / bh;
 
-  if (circ > 0.78) return aspect > 0.78 && aspect < 1.28 ? "circle" : "oval";
-  if (corners === 3) return "triangle";
-  if (corners === 4) {
-    if (aspect > 0.78 && aspect < 1.28) return "square";
-    return "rectangle";
+  // Circle / oval first via circularity (>0.80 is very round)
+  if (circ > 0.82 || (corners > 8 && circ > 0.7)) {
+    const shape: ShapeName = aspect > 0.82 && aspect < 1.22 ? "circle" : "oval";
+    return { shape, vertices: corners, circularity: circ };
   }
-  if (corners === 5) return "pentagon";
-  if (corners === 6) return "hexagon";
-  if (corners > 6 && circ > 0.65) return aspect > 0.78 && aspect < 1.28 ? "circle" : "oval";
-  return null;
+  let shape: ShapeName | null = null;
+  if (corners === 3) shape = "triangle";
+  else if (corners === 4) shape = aspect > 0.82 && aspect < 1.22 ? "square" : "rectangle";
+  else if (corners === 5) shape = "pentagon";
+  else if (corners === 6) shape = "hexagon";
+  return { shape, vertices: corners, circularity: circ };
+}
+
+// Dominant color from inside a single-blob mask
+export function dominantColor(
+  data: Uint8ClampedArray, mask: Uint8Array, W: number, H: number,
+): ColorName | null {
+  const counts: Record<string, number> = {};
+  let total = 0;
+  for (let j = 0; j < W * H; j++) {
+    if (!mask[j]) continue;
+    const i = j * 4;
+    const { h, s, v } = rgb2hsv(data[i], data[i + 1], data[i + 2]);
+    const c = classifyHSV(h, s, v);
+    if (c) { counts[c] = (counts[c] || 0) + 1; total++; }
+  }
+  if (!total) return null;
+  let best: ColorName | null = null, bc = 0;
+  for (const k of Object.keys(counts) as ColorName[]) {
+    if (counts[k] > bc) { bc = counts[k]; best = k; }
+  }
+  return bc > total * 0.25 ? best : null;
 }
