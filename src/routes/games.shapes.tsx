@@ -13,7 +13,7 @@ import { KidButton } from "@/components/KidButton";
 import { Celebration } from "@/components/Celebration";
 import { sfx, speak } from "@/lib/audio";
 import {
-  classifyShape, COLOR_META, segmentObject, traceContour,
+  classifyShape, COLOR_META, dominantColor, segmentObjectGray, traceContour,
   type ShapeName,
 } from "@/lib/vision";
 
