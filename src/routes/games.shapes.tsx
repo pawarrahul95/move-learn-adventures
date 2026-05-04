@@ -86,22 +86,30 @@ function ShapeGame() {
         if (ctx) {
           ctx.drawImage(v, 0, 0, W, H);
           const img = ctx.getImageData(0, 0, W, H);
-          const seg = segmentObject(img.data, W, H);
+          const seg = segmentObjectGray(img.data, W, H);
 
           let shape: ShapeName | null = null;
+          let vertices = 0, circularity = 0;
           let contourPts: { x: number; y: number }[] = [];
+          let segColor: ReturnType<typeof dominantColor> = null;
           if (seg.bbox) {
             contourPts = traceContour(seg.mask, W, H, seg.bbox);
-            shape = contourPts.length > 0 ? classifyShape(contourPts, seg.bbox) : null;
+            if (contourPts.length > 0) {
+              const cls = classifyShape(contourPts, seg.bbox);
+              shape = cls.shape;
+              vertices = cls.vertices;
+              circularity = cls.circularity;
+            }
+            segColor = dominantColor(img.data, seg.mask, W, H);
           }
 
           recentRef.current.push(shape);
-          if (recentRef.current.length > 4) recentRef.current.shift();
+          if (recentRef.current.length > 5) recentRef.current.shift();
           const counts: Record<string, number> = {};
           for (const r of recentRef.current) if (r) counts[r] = (counts[r] || 0) + 1;
           let stable: ShapeName | null = null, sc = 0;
           for (const k of Object.keys(counts) as ShapeName[]) if (counts[k] > sc) { sc = counts[k]; stable = k; }
-          if (sc < 2) stable = null;
+          if (sc < 3) stable = null;
           setDetected(stable);
 
           // Overlay
@@ -113,8 +121,7 @@ function ShapeGame() {
               const sx = ov.width / W, sy = ov.height / H;
               const x = seg.bbox.x * sx, y = seg.bbox.y * sy;
               const bw = seg.bbox.w * sx, bh = seg.bbox.h * sy;
-              const accent = seg.color ? COLOR_META[seg.color].swatch : "#22c55e";
-              // contour
+              const accent = segColor ? COLOR_META[segColor].swatch : "#22c55e";
               if (contourPts.length > 1) {
                 octx.lineWidth = 2;
                 octx.strokeStyle = accent;
@@ -130,16 +137,22 @@ function ShapeGame() {
               octx.shadowColor = "rgba(0,0,0,0.6)";
               octx.shadowBlur = 6;
               octx.strokeRect(x, y, bw, bh);
+              octx.shadowBlur = 0;
               if (stable) {
-                octx.shadowBlur = 0;
                 octx.fillStyle = accent;
-                const labelText = `${seg.color ? seg.color.toUpperCase() + " " : ""}${stable.toUpperCase()}`;
+                const labelText = `${segColor ? segColor.toUpperCase() + " " : ""}${stable.toUpperCase()}`;
                 octx.font = "bold 18px system-ui, sans-serif";
                 const tw = Math.max(140, octx.measureText(labelText).width + 16);
                 octx.fillRect(x, Math.max(0, y - 28), tw, 26);
                 octx.fillStyle = "#ffffff";
                 octx.fillText(labelText, x + 8, Math.max(18, y - 9));
               }
+              // Debug chip — vertices + circularity
+              octx.fillStyle = "rgba(0,0,0,0.55)";
+              octx.fillRect(x, y + bh + 4, 150, 22);
+              octx.fillStyle = "#ffffff";
+              octx.font = "bold 12px system-ui, sans-serif";
+              octx.fillText(`v:${vertices}  c:${circularity.toFixed(2)}`, x + 6, y + bh + 19);
             }
           }
 
