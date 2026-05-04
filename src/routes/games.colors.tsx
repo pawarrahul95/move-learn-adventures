@@ -10,7 +10,7 @@ import { CenterMessage } from "@/components/CenterMessage";
 import { KidButton } from "@/components/KidButton";
 import { Celebration } from "@/components/Celebration";
 import { sfx, speak } from "@/lib/audio";
-import { COLOR_META, segmentObject, type ColorName } from "@/lib/vision";
+import { COLOR_META, dominantColor, segmentObjectGray, type ColorName } from "@/lib/vision";
 
 export const Route = createFileRoute("/games/colors")({
   head: () => ({
