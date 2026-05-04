@@ -363,18 +363,26 @@ export function rdp(points: Pt[], epsilon: number): Pt[] {
   return [points[0], points[points.length - 1]];
 }
 
-export function classifyShape(contour: Pt[], bbox: BBox): ShapeName | null {
-  if (contour.length < 30) return null;
+export function classifyShape(
+  contour: Pt[],
+  bbox: BBox,
+): { shape: ShapeName | null; vertices: number; circularity: number } {
+  const empty = { shape: null, vertices: 0, circularity: 0 };
+  if (contour.length < 30) return empty;
   const bw = bbox.w, bh = bbox.h;
-  if (bw < 24 || bh < 24) return null;
+  if (bw < 24 || bh < 24) return empty;
 
   let peri = 0;
   for (let i = 1; i < contour.length; i++) {
     peri += Math.hypot(contour[i].x - contour[i - 1].x, contour[i].y - contour[i - 1].y);
   }
-  const eps = 0.035 * peri;
-  const poly = rdp(contour, eps);
-  const corners = poly.length - 1;
+  // approxPolyDP — sweep epsilon to land on a stable vertex count
+  let poly = rdp(contour, 0.04 * peri);
+  let corners = poly.length - 1;
+  if (corners > 10) {
+    poly = rdp(contour, 0.06 * peri);
+    corners = poly.length - 1;
+  }
 
   let area = 0;
   for (let i = 0; i < contour.length - 1; i++) {
@@ -384,14 +392,36 @@ export function classifyShape(contour: Pt[], bbox: BBox): ShapeName | null {
   const circ = (4 * Math.PI * area) / (peri * peri || 1);
   const aspect = bw / bh;
 
-  if (circ > 0.78) return aspect > 0.78 && aspect < 1.28 ? "circle" : "oval";
-  if (corners === 3) return "triangle";
-  if (corners === 4) {
-    if (aspect > 0.78 && aspect < 1.28) return "square";
-    return "rectangle";
+  // Circle / oval first via circularity (>0.80 is very round)
+  if (circ > 0.82 || (corners > 8 && circ > 0.7)) {
+    const shape: ShapeName = aspect > 0.82 && aspect < 1.22 ? "circle" : "oval";
+    return { shape, vertices: corners, circularity: circ };
   }
-  if (corners === 5) return "pentagon";
-  if (corners === 6) return "hexagon";
-  if (corners > 6 && circ > 0.65) return aspect > 0.78 && aspect < 1.28 ? "circle" : "oval";
-  return null;
+  let shape: ShapeName | null = null;
+  if (corners === 3) shape = "triangle";
+  else if (corners === 4) shape = aspect > 0.82 && aspect < 1.22 ? "square" : "rectangle";
+  else if (corners === 5) shape = "pentagon";
+  else if (corners === 6) shape = "hexagon";
+  return { shape, vertices: corners, circularity: circ };
+}
+
+// Dominant color from inside a single-blob mask
+export function dominantColor(
+  data: Uint8ClampedArray, mask: Uint8Array, W: number, H: number,
+): ColorName | null {
+  const counts: Record<string, number> = {};
+  let total = 0;
+  for (let j = 0; j < W * H; j++) {
+    if (!mask[j]) continue;
+    const i = j * 4;
+    const { h, s, v } = rgb2hsv(data[i], data[i + 1], data[i + 2]);
+    const c = classifyHSV(h, s, v);
+    if (c) { counts[c] = (counts[c] || 0) + 1; total++; }
+  }
+  if (!total) return null;
+  let best: ColorName | null = null, bc = 0;
+  for (const k of Object.keys(counts) as ColorName[]) {
+    if (counts[k] > bc) { bc = counts[k]; best = k; }
+  }
+  return bc > total * 0.25 ? best : null;
 }
