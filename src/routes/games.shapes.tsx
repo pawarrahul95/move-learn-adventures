@@ -1,5 +1,6 @@
-// Shape Detective — child shows a real object; we threshold the camera frame,
-// trace the largest contour, and approximate corners with Douglas-Peucker.
+// Shape Detective — segment foreground object, trace its contour, classify
+// from triangle … hexagon plus circle/oval. Bounding box + label only inside
+// the object region.
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -11,12 +12,16 @@ import { CenterMessage } from "@/components/CenterMessage";
 import { KidButton } from "@/components/KidButton";
 import { Celebration } from "@/components/Celebration";
 import { sfx, speak } from "@/lib/audio";
+import {
+  classifyShape, COLOR_META, segmentObject, traceContour,
+  type ShapeName,
+} from "@/lib/vision";
 
 export const Route = createFileRoute("/games/shapes")({
   head: () => ({
     meta: [
       { title: "Shape Detective — PlayLearn" },
-      { name: "description", content: "Bring me a triangle, a square, or a circle!" },
+      { name: "description", content: "Bring me a triangle, square, circle, pentagon, hexagon and more!" },
     ],
   }),
   beforeLoad: () => {
@@ -25,140 +30,28 @@ export const Route = createFileRoute("/games/shapes")({
   component: ShapeGame,
 });
 
-type ShapeName = "triangle" | "square" | "circle";
 const SHAPES: { name: ShapeName; emoji: string; svg: ReactNode }[] = [
-  {
-    name: "triangle",
-    emoji: "🔺",
-    svg: <polygon points="50,10 90,85 10,85" fill="currentColor" />,
-  },
-  {
-    name: "square",
-    emoji: "🟦",
-    svg: <rect x="15" y="15" width="70" height="70" rx="6" fill="currentColor" />,
-  },
-  {
-    name: "circle",
-    emoji: "🟢",
-    svg: <circle cx="50" cy="50" r="38" fill="currentColor" />,
-  },
+  { name: "triangle",  emoji: "🔺", svg: <polygon points="50,10 90,85 10,85" fill="currentColor" /> },
+  { name: "square",    emoji: "🟦", svg: <rect x="15" y="15" width="70" height="70" rx="6" fill="currentColor" /> },
+  { name: "rectangle", emoji: "▬",  svg: <rect x="8" y="28" width="84" height="44" rx="4" fill="currentColor" /> },
+  { name: "circle",    emoji: "🟢", svg: <circle cx="50" cy="50" r="38" fill="currentColor" /> },
+  { name: "oval",      emoji: "⬭",  svg: <ellipse cx="50" cy="50" rx="40" ry="26" fill="currentColor" /> },
+  { name: "pentagon",  emoji: "⬟",  svg: <polygon points="50,8 92,38 76,86 24,86 8,38" fill="currentColor" /> },
+  { name: "hexagon",   emoji: "⬢",  svg: <polygon points="50,8 88,30 88,70 50,92 12,70 12,30" fill="currentColor" /> },
 ];
-
-// --- contour utilities ---------------------------------------------------
-
-// Moore-Neighbor boundary trace on a binary mask.
-function traceContour(mask: Uint8Array, w: number, h: number): { x: number; y: number }[] {
-  // Find first foreground pixel
-  let sx = -1, sy = -1;
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      if (mask[y * w + x]) { sx = x; sy = y; break; }
-    }
-    if (sx >= 0) break;
-  }
-  if (sx < 0) return [];
-
-  // 8-neighborhood (clockwise starting from left)
-  const dx = [-1, -1, 0, 1, 1, 1, 0, -1];
-  const dy = [0, -1, -1, -1, 0, 1, 1, 1];
-
-  const pts: { x: number; y: number }[] = [];
-  let cx = sx, cy = sy;
-  let prevDir = 6; // came from below
-  const maxSteps = 8000;
-
-  for (let i = 0; i < maxSteps; i++) {
-    pts.push({ x: cx, y: cy });
-    let found = false;
-    const startDir = (prevDir + 6) % 8;
-    for (let k = 0; k < 8; k++) {
-      const d = (startDir + k) % 8;
-      const nx = cx + dx[d], ny = cy + dy[d];
-      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-      if (mask[ny * w + nx]) {
-        cx = nx; cy = ny; prevDir = d; found = true; break;
-      }
-    }
-    if (!found) break;
-    if (cx === sx && cy === sy && pts.length > 4) break;
-  }
-  return pts;
-}
-
-// Perpendicular distance from p to segment a-b.
-function perpDist(p: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) {
-  const dx = b.x - a.x, dy = b.y - a.y;
-  if (dx === 0 && dy === 0) return Math.hypot(p.x - a.x, p.y - a.y);
-  const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy);
-  const px = a.x + t * dx, py = a.y + t * dy;
-  return Math.hypot(p.x - px, p.y - py);
-}
-
-function rdp(points: { x: number; y: number }[], epsilon: number): { x: number; y: number }[] {
-  if (points.length < 3) return points;
-  let maxD = 0, idx = 0;
-  for (let i = 1; i < points.length - 1; i++) {
-    const d = perpDist(points[i], points[0], points[points.length - 1]);
-    if (d > maxD) { maxD = d; idx = i; }
-  }
-  if (maxD > epsilon) {
-    const left = rdp(points.slice(0, idx + 1), epsilon);
-    const right = rdp(points.slice(idx), epsilon);
-    return left.slice(0, -1).concat(right);
-  }
-  return [points[0], points[points.length - 1]];
-}
-
-function classifyShape(contour: { x: number; y: number }[]): ShapeName | null {
-  if (contour.length < 30) return null;
-  // Compute bounding box and area for sanity / circularity
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of contour) {
-    if (p.x < minX) minX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y > maxY) maxY = p.y;
-  }
-  const bw = maxX - minX, bh = maxY - minY;
-  if (bw < 30 || bh < 30) return null;
-
-  // Perimeter
-  let peri = 0;
-  for (let i = 1; i < contour.length; i++) {
-    peri += Math.hypot(contour[i].x - contour[i - 1].x, contour[i].y - contour[i - 1].y);
-  }
-  // Approx polygon
-  const epsilon = 0.035 * peri;
-  const poly = rdp(contour, epsilon);
-  const corners = poly.length - 1; // last == first usually
-
-  // Circularity = 4π·area / peri²
-  // Estimate area via shoelace
-  let area = 0;
-  for (let i = 0; i < contour.length - 1; i++) {
-    area += contour[i].x * contour[i + 1].y - contour[i + 1].x * contour[i].y;
-  }
-  area = Math.abs(area) / 2;
-  const circ = (4 * Math.PI * area) / (peri * peri || 1);
-  const aspect = bw / bh;
-
-  if (circ > 0.78 && aspect > 0.7 && aspect < 1.4) return "circle";
-  if (corners === 3) return "triangle";
-  if (corners === 4 && aspect > 0.6 && aspect < 1.7) return "square";
-  return null;
-}
 
 function ShapeGame() {
   const { active } = useProfiles();
   const { videoRef, ready, error } = useCamera(true, "environment");
   const procRef = useRef<HTMLCanvasElement | null>(null);
-  const debugRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayRef = useRef<HTMLCanvasElement | null>(null);
 
   const [target, setTarget] = useState<ShapeName>("triangle");
   const [detected, setDetected] = useState<ShapeName | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
   const [celebrate, setCelebrate] = useState(false);
   const matchedAtRef = useRef<number | null>(null);
+  const recentRef = useRef<(ShapeName | null)[]>([]);
 
   const pickTarget = (avoid?: ShapeName) => {
     const pool = SHAPES.filter((s) => s.name !== avoid);
@@ -167,6 +60,7 @@ function ShapeGame() {
     matchedAtRef.current = null;
     setHoldProgress(0);
     setCelebrate(false);
+    recentRef.current = [];
     speak(`Bring me a ${next}!`, { pitch: 1.3 });
   };
 
@@ -177,89 +71,87 @@ function ShapeGame() {
 
   useEffect(() => {
     if (!ready) return;
-    let raf = 0;
-    let running = true;
+    let raf = 0, running = true;
+    let last = 0;
+    const W = 192, H = 144;
 
-    const tick = () => {
+    const tick = (t: number) => {
       if (!running) return;
-      const v = videoRef.current, c = procRef.current, dbg = debugRef.current;
-      if (v && c && dbg && v.videoWidth > 0) {
-        const W = 160, H = 120;
+      if (t - last < 33) { raf = requestAnimationFrame(tick); return; }
+      last = t;
+      const v = videoRef.current, c = procRef.current, ov = overlayRef.current;
+      if (v && c && ov && v.videoWidth > 0) {
         c.width = W; c.height = H;
         const ctx = c.getContext("2d", { willReadFrequently: true });
         if (ctx) {
           ctx.drawImage(v, 0, 0, W, H);
           const img = ctx.getImageData(0, 0, W, H);
-          const data = img.data;
+          const seg = segmentObject(img.data, W, H);
 
-          // Convert to grayscale, compute mean
-          const gray = new Float32Array(W * H);
-          let mean = 0;
-          for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-            const g = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-            gray[j] = g;
-            mean += g;
+          let shape: ShapeName | null = null;
+          let contourPts: { x: number; y: number }[] = [];
+          if (seg.bbox) {
+            contourPts = traceContour(seg.mask, W, H, seg.bbox);
+            shape = contourPts.length > 0 ? classifyShape(contourPts, seg.bbox) : null;
           }
-          mean /= W * H;
 
-          // Threshold: pick darker-than-mean OR brighter-than-mean (whichever has fewer pixels)
-          const darkMask = new Uint8Array(W * H);
-          const brightMask = new Uint8Array(W * H);
-          let darkCount = 0, brightCount = 0;
-          for (let j = 0; j < gray.length; j++) {
-            if (gray[j] < mean - 25) { darkMask[j] = 1; darkCount++; }
-            else if (gray[j] > mean + 25) { brightMask[j] = 1; brightCount++; }
-          }
-          // Choose the side that occupies a reasonable middle range (object likely)
-          let mask: Uint8Array;
-          const total = W * H;
-          const darkRatio = darkCount / total;
-          const brightRatio = brightCount / total;
-          if (darkRatio > 0.05 && darkRatio < 0.6 && darkRatio >= brightRatio) mask = darkMask;
-          else if (brightRatio > 0.05 && brightRatio < 0.6) mask = brightMask;
-          else { mask = darkMask; }
+          recentRef.current.push(shape);
+          if (recentRef.current.length > 4) recentRef.current.shift();
+          const counts: Record<string, number> = {};
+          for (const r of recentRef.current) if (r) counts[r] = (counts[r] || 0) + 1;
+          let stable: ShapeName | null = null, sc = 0;
+          for (const k of Object.keys(counts) as ShapeName[]) if (counts[k] > sc) { sc = counts[k]; stable = k; }
+          if (sc < 2) stable = null;
+          setDetected(stable);
 
-          // Erode once to remove specks (3x3 box)
-          const eroded = new Uint8Array(W * H);
-          for (let y = 1; y < H - 1; y++) {
-            for (let x = 1; x < W - 1; x++) {
-              const i = y * W + x;
-              if (
-                mask[i] && mask[i - 1] && mask[i + 1] &&
-                mask[i - W] && mask[i + W]
-              ) eroded[i] = 1;
+          // Overlay
+          ov.width = v.clientWidth; ov.height = v.clientHeight;
+          const octx = ov.getContext("2d");
+          if (octx) {
+            octx.clearRect(0, 0, ov.width, ov.height);
+            if (seg.bbox) {
+              const sx = ov.width / W, sy = ov.height / H;
+              const x = seg.bbox.x * sx, y = seg.bbox.y * sy;
+              const bw = seg.bbox.w * sx, bh = seg.bbox.h * sy;
+              const accent = seg.color ? COLOR_META[seg.color].swatch : "#22c55e";
+              // contour
+              if (contourPts.length > 1) {
+                octx.lineWidth = 2;
+                octx.strokeStyle = accent;
+                octx.beginPath();
+                octx.moveTo(contourPts[0].x * sx, contourPts[0].y * sy);
+                for (let i = 1; i < contourPts.length; i++) {
+                  octx.lineTo(contourPts[i].x * sx, contourPts[i].y * sy);
+                }
+                octx.stroke();
+              }
+              octx.lineWidth = 4;
+              octx.strokeStyle = accent;
+              octx.shadowColor = "rgba(0,0,0,0.6)";
+              octx.shadowBlur = 6;
+              octx.strokeRect(x, y, bw, bh);
+              if (stable) {
+                octx.shadowBlur = 0;
+                octx.fillStyle = accent;
+                const labelText = `${seg.color ? seg.color.toUpperCase() + " " : ""}${stable.toUpperCase()}`;
+                octx.font = "bold 18px system-ui, sans-serif";
+                const tw = Math.max(140, octx.measureText(labelText).width + 16);
+                octx.fillRect(x, Math.max(0, y - 28), tw, 26);
+                octx.fillStyle = "#ffffff";
+                octx.fillText(labelText, x + 8, Math.max(18, y - 9));
+              }
             }
           }
 
-          const contour = traceContour(eroded, W, H);
-          const cls = contour.length > 0 ? classifyShape(contour) : null;
-          setDetected(cls);
-
-          // Debug overlay sized to display
-          dbg.width = W; dbg.height = H;
-          const dctx = dbg.getContext("2d");
-          if (dctx) {
-            dctx.clearRect(0, 0, W, H);
-            if (contour.length > 1) {
-              dctx.strokeStyle = "#22c55e";
-              dctx.lineWidth = 2;
-              dctx.beginPath();
-              dctx.moveTo(contour[0].x, contour[0].y);
-              for (let i = 1; i < contour.length; i++) dctx.lineTo(contour[i].x, contour[i].y);
-              dctx.closePath();
-              dctx.stroke();
-            }
-          }
-
-          if (cls === target) {
+          if (stable === target) {
             if (matchedAtRef.current === null) matchedAtRef.current = performance.now();
             const elapsed = performance.now() - matchedAtRef.current;
-            const HOLD_MS = 1500;
+            const HOLD_MS = 1200;
             setHoldProgress(Math.min(1, elapsed / HOLD_MS));
             if (elapsed >= HOLD_MS && !celebrate) {
               if (active) {
                 addStars(active.id, 1);
-                setProgress(active.id, "shapes", Math.min(1, (active.progress.shapes ?? 0) + 0.15));
+                setProgress(active.id, "shapes", Math.min(1, (active.progress.shapes ?? 0) + 0.12));
               }
               sfx.success();
               setCelebrate(true);
@@ -272,11 +164,8 @@ function ShapeGame() {
       }
       raf = requestAnimationFrame(tick);
     };
-    tick();
-    return () => {
-      running = false;
-      cancelAnimationFrame(raf);
-    };
+    raf = requestAnimationFrame(tick);
+    return () => { running = false; cancelAnimationFrame(raf); };
   }, [ready, target, active, celebrate, videoRef]);
 
   const targetData = SHAPES.find((s) => s.name === target)!;
@@ -301,10 +190,7 @@ function ShapeGame() {
             muted
           />
           <canvas ref={procRef} className="hidden" />
-          <canvas
-            ref={debugRef}
-            className="pointer-events-none absolute inset-0 h-full w-full"
-          />
+          <canvas ref={overlayRef} className="pointer-events-none absolute inset-0 h-full w-full" />
 
           {error && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-6 text-center text-white">
@@ -324,10 +210,7 @@ function ShapeGame() {
             <span className="text-sm font-bold text-muted-foreground">I see:</span>
             <span className="text-sm font-bold capitalize">{detected ?? "looking…"}</span>
             <div className="ml-auto flex h-3 w-32 overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full bg-grass transition-all"
-                style={{ width: `${holdProgress * 100}%` }}
-              />
+              <div className="h-full bg-grass transition-all" style={{ width: `${holdProgress * 100}%` }} />
             </div>
           </div>
         </div>
