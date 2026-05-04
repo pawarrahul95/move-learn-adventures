@@ -1,5 +1,5 @@
-// Color Hunt — child shows an object of the prompted color in front of the camera.
-// We sample a center patch and convert RGB→HSV to classify dominant color.
+// Color Hunt — detect ONLY the foreground object (largest blob) and read its
+// dominant color. Bounding box is drawn around the detected object.
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useCamera } from "@/lib/use-camera";
@@ -10,6 +10,7 @@ import { CenterMessage } from "@/components/CenterMessage";
 import { KidButton } from "@/components/KidButton";
 import { Celebration } from "@/components/Celebration";
 import { sfx, speak } from "@/lib/audio";
+import { COLOR_META, segmentObject, type ColorName } from "@/lib/vision";
 
 export const Route = createFileRoute("/games/colors")({
   head: () => ({
@@ -24,119 +25,96 @@ export const Route = createFileRoute("/games/colors")({
   component: ColorGame,
 });
 
-type ColorName = "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "pink";
-const COLORS: { name: ColorName; emoji: string; swatch: string }[] = [
-  { name: "red", emoji: "🍎", swatch: "#ef4444" },
-  { name: "orange", emoji: "🍊", swatch: "#f97316" },
-  { name: "yellow", emoji: "🍌", swatch: "#facc15" },
-  { name: "green", emoji: "🥦", swatch: "#22c55e" },
-  { name: "blue", emoji: "🫐", swatch: "#3b82f6" },
-  { name: "purple", emoji: "🍇", swatch: "#a855f7" },
-  { name: "pink", emoji: "🌸", swatch: "#ec4899" },
-];
-
-function rgb2hsv(r: number, g: number, b: number) {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  const d = max - min;
-  let h = 0;
-  if (d === 0) h = 0;
-  else if (max === r) h = ((g - b) / d) % 6;
-  else if (max === g) h = (b - r) / d + 2;
-  else h = (r - g) / d + 4;
-  h = Math.round(h * 60);
-  if (h < 0) h += 360;
-  const s = max === 0 ? 0 : d / max;
-  const v = max;
-  return { h, s, v };
-}
-
-function classify(h: number, s: number, v: number): ColorName | null {
-  if (v < 0.2) return null; // too dark
-  if (s < 0.25) return null; // too gray
-  if (h < 15 || h >= 345) return "red";
-  if (h < 40) return "orange";
-  if (h < 65) return "yellow";
-  if (h < 170) return "green";
-  if (h < 250) return "blue";
-  if (h < 290) return "purple";
-  return "pink";
-}
+const TARGETS: ColorName[] = ["red", "orange", "yellow", "green", "blue", "purple", "pink", "white", "black", "brown"];
 
 function ColorGame() {
   const { active } = useProfiles();
   const { videoRef, ready, error } = useCamera(true, "environment");
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const procRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayRef = useRef<HTMLCanvasElement | null>(null);
 
   const [target, setTarget] = useState<ColorName>("red");
   const [detected, setDetected] = useState<ColorName | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
   const [celebrate, setCelebrate] = useState(false);
   const matchedAtRef = useRef<number | null>(null);
+  const recentRef = useRef<(ColorName | null)[]>([]);
 
-  // Pick a new target
   const pickTarget = (avoid?: ColorName) => {
-    const pool = COLORS.filter((c) => c.name !== avoid);
-    const next = pool[Math.floor(Math.random() * pool.length)].name;
+    const pool = TARGETS.filter((c) => c !== avoid);
+    const next = pool[Math.floor(Math.random() * pool.length)];
     setTarget(next);
     matchedAtRef.current = null;
     setHoldProgress(0);
     setCelebrate(false);
+    recentRef.current = [];
     speak(`Find me something ${next}!`, { pitch: 1.3 });
   };
 
   useEffect(() => {
     speak(`Find me something ${target}!`, { pitch: 1.3 });
-    // run once on mount; subsequent prompts handled in pickTarget
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sampling loop
   useEffect(() => {
     if (!ready) return;
-    let raf = 0;
-    let running = true;
+    let raf = 0, running = true;
+    let last = 0;
+    const W = 192, H = 144; // ~27k pixels — fast
 
-    const tick = () => {
+    const tick = (t: number) => {
       if (!running) return;
-      const v = videoRef.current, c = canvasRef.current;
-      if (v && c && v.videoWidth > 0) {
-        const cw = 64, ch = 48;
-        c.width = cw;
-        c.height = ch;
+      // throttle to ~30fps
+      if (t - last < 33) { raf = requestAnimationFrame(tick); return; }
+      last = t;
+      const v = videoRef.current, c = procRef.current, ov = overlayRef.current;
+      if (v && c && ov && v.videoWidth > 0) {
+        c.width = W; c.height = H;
         const ctx = c.getContext("2d", { willReadFrequently: true });
         if (ctx) {
-          // Sample center 50% region
-          const sx = v.videoWidth * 0.25, sy = v.videoHeight * 0.25;
-          const sw = v.videoWidth * 0.5, sh = v.videoHeight * 0.5;
-          ctx.drawImage(v, sx, sy, sw, sh, 0, 0, cw, ch);
-          const data = ctx.getImageData(0, 0, cw, ch).data;
+          ctx.drawImage(v, 0, 0, W, H);
+          const img = ctx.getImageData(0, 0, W, H);
+          const seg = segmentObject(img.data, W, H);
+
+          // Smooth: confirm across last 3 frames
+          recentRef.current.push(seg.color);
+          if (recentRef.current.length > 3) recentRef.current.shift();
           const counts: Record<string, number> = {};
-          let rSum = 0, gSum = 0, bSum = 0, n = 0;
-          for (let i = 0; i < data.length; i += 4) {
-            const r = data[i], g = data[i + 1], b = data[i + 2];
-            rSum += r; gSum += g; bSum += b; n++;
-            const { h, s, v: val } = rgb2hsv(r, g, b);
-            const cls = classify(h, s, val);
-            if (cls) counts[cls] = (counts[cls] || 0) + 1;
-          }
-          let best: ColorName | null = null;
-          let bestCount = 0;
-          for (const k of Object.keys(counts) as ColorName[]) {
-            if (counts[k] > bestCount) {
-              bestCount = counts[k];
-              best = k;
+          for (const r of recentRef.current) if (r) counts[r] = (counts[r] || 0) + 1;
+          let stable: ColorName | null = null, sc = 0;
+          for (const k of Object.keys(counts) as ColorName[]) if (counts[k] > sc) { sc = counts[k]; stable = k; }
+          if (sc < 2) stable = null;
+          setDetected(stable);
+
+          // overlay (in display space)
+          ov.width = v.clientWidth; ov.height = v.clientHeight;
+          const octx = ov.getContext("2d");
+          if (octx) {
+            octx.clearRect(0, 0, ov.width, ov.height);
+            if (seg.bbox) {
+              const sx = ov.width / W, sy = ov.height / H;
+              const x = seg.bbox.x * sx, y = seg.bbox.y * sy;
+              const bw = seg.bbox.w * sx, bh = seg.bbox.h * sy;
+              octx.lineWidth = 4;
+              octx.strokeStyle = stable ? COLOR_META[stable].swatch : "#ffffff";
+              octx.shadowColor = "rgba(0,0,0,0.6)";
+              octx.shadowBlur = 6;
+              octx.strokeRect(x, y, bw, bh);
+              if (stable) {
+                octx.shadowBlur = 0;
+                octx.fillStyle = COLOR_META[stable].swatch;
+                octx.fillRect(x, Math.max(0, y - 28), Math.max(110, bw), 26);
+                octx.fillStyle = "#ffffff";
+                octx.font = "bold 18px system-ui, sans-serif";
+                octx.fillText(stable.toUpperCase(), x + 8, Math.max(18, y - 9));
+              }
             }
           }
-          // Need at least 25% of patch to agree
-          if (bestCount < n * 0.25) best = null;
-          setDetected(best);
 
-          // Hold to confirm
-          if (best === target) {
+          if (stable === target) {
             if (matchedAtRef.current === null) matchedAtRef.current = performance.now();
             const elapsed = performance.now() - matchedAtRef.current;
-            const HOLD_MS = 1200;
+            const HOLD_MS = 1000;
             setHoldProgress(Math.min(1, elapsed / HOLD_MS));
             if (elapsed >= HOLD_MS && !celebrate) {
               if (active) {
@@ -150,21 +128,16 @@ function ColorGame() {
             matchedAtRef.current = null;
             setHoldProgress(0);
           }
-          // Suppress lint warnings for unused sums
-          void rSum; void gSum; void bSum;
         }
       }
       raf = requestAnimationFrame(tick);
     };
-    tick();
-    return () => {
-      running = false;
-      cancelAnimationFrame(raf);
-    };
+    raf = requestAnimationFrame(tick);
+    return () => { running = false; cancelAnimationFrame(raf); };
   }, [ready, target, active, celebrate, videoRef]);
 
-  const targetData = COLORS.find((c) => c.name === target)!;
-  const detectedData = detected ? COLORS.find((c) => c.name === detected) : null;
+  const targetData = COLOR_META[target];
+  const detectedData = detected ? COLOR_META[detected] : null;
 
   return (
     <main className="flex min-h-dvh flex-col bg-gradient-sky">
@@ -189,12 +162,11 @@ function ColorGame() {
             playsInline
             muted
           />
-          <canvas ref={canvasRef} className="hidden" />
-
-          {/* Center crosshair box */}
-          <div className="tv-hide-in-tv pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="h-1/2 w-1/2 rounded-3xl border-4 border-dashed border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]" />
-          </div>
+          <canvas ref={procRef} className="hidden" />
+          <canvas
+            ref={overlayRef}
+            className="pointer-events-none absolute inset-0 h-full w-full"
+          />
 
           {error && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-6 text-center text-white">
@@ -214,20 +186,14 @@ function ColorGame() {
             <span className="text-sm font-bold text-muted-foreground">I see:</span>
             {detectedData ? (
               <span className="flex items-center gap-2 text-sm font-bold capitalize">
-                <span
-                  className="h-5 w-5 rounded-full"
-                  style={{ background: detectedData.swatch }}
-                />
+                <span className="h-5 w-5 rounded-full border" style={{ background: detectedData.swatch }} />
                 {detected}
               </span>
             ) : (
               <span className="text-sm font-bold text-muted-foreground">looking…</span>
             )}
             <div className="ml-auto flex h-3 w-32 overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full bg-grass transition-all"
-                style={{ width: `${holdProgress * 100}%` }}
-              />
+              <div className="h-full bg-grass transition-all" style={{ width: `${holdProgress * 100}%` }} />
             </div>
           </div>
         </div>
@@ -239,7 +205,7 @@ function ColorGame() {
         </div>
 
         <p className="pb-6 text-center text-base font-bold text-sky-foreground">
-          Hold the {target} object inside the box and keep still!
+          Hold one {target} object up against a plain background.
         </p>
       </div>
 
