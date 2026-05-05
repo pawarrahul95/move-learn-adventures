@@ -10,7 +10,9 @@ export const AVATARS: { id: Avatar; emoji: string; bg: string }[] = [
   { id: "owl", emoji: "🦉", bg: "bg-[oklch(0.82_0.1_60)]" },
 ];
 
-export type GameId = "alphabet" | "colors" | "shapes";
+export type GameId =
+  | "alphabet" | "colors" | "shapes"
+  | "scavenger" | "animals" | "freeze" | "simon" | "yoga" | "routine";
 
 export type Profile = {
   id: string;
@@ -50,7 +52,7 @@ export function createProfile(input: { name: string; age: number; avatar: Avatar
     age: Math.max(3, Math.min(7, Math.round(input.age))),
     avatar: input.avatar,
     stars: 0,
-    progress: { alphabet: 0, colors: 0, shapes: 0 },
+    progress: { alphabet: 0, colors: 0, shapes: 0, scavenger: 0, animals: 0, freeze: 0, simon: 0, yoga: 0, routine: 0 },
     lettersLearned: [],
     createdAt: Date.now(),
   };
