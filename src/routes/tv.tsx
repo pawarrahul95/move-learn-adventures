@@ -35,9 +35,15 @@ export function tvSubscribe(cb: Listener) {
 export function tvStatus() { return tvBus.status; }
 
 const TILES = [
-  { id: "alphabet", title: "Alphabet Adventure", emoji: "🔤", to: "/games/alphabet" as const, bg: "from-[oklch(0.88_0.18_60)] to-[oklch(0.78_0.18_30)]" },
-  { id: "colors",   title: "Color Catcher",      emoji: "🎨", to: "/games/colors"   as const, bg: "from-[oklch(0.78_0.15_230)] to-[oklch(0.7_0.18_270)]" },
-  { id: "shapes",   title: "Shape Finder",       emoji: "🔺", to: "/games/shapes"   as const, bg: "from-[oklch(0.82_0.18_145)] to-[oklch(0.7_0.18_170)]" },
+  { id: "alphabet",  title: "Alphabet Adventure", emoji: "🔤", to: "/games/alphabet"  as const, bg: "from-[oklch(0.88_0.18_60)] to-[oklch(0.78_0.18_30)]" },
+  { id: "colors",    title: "Color Catcher",      emoji: "🎨", to: "/games/colors"    as const, bg: "from-[oklch(0.78_0.15_230)] to-[oklch(0.7_0.18_270)]" },
+  { id: "shapes",    title: "Shape Finder",       emoji: "🔺", to: "/games/shapes"    as const, bg: "from-[oklch(0.82_0.18_145)] to-[oklch(0.7_0.18_170)]" },
+  { id: "scavenger", title: "Scavenger Hunt",     emoji: "🔍", to: "/games/scavenger" as const, bg: "from-[oklch(0.78_0.2_320)] to-[oklch(0.65_0.22_350)]" },
+  { id: "animals",   title: "Animal Moves",       emoji: "🐸", to: "/games/animals"   as const, bg: "from-[oklch(0.85_0.18_120)] to-[oklch(0.72_0.2_90)]" },
+  { id: "freeze",    title: "Musical Freeze",     emoji: "🎵", to: "/games/freeze"    as const, bg: "from-[oklch(0.8_0.15_200)] to-[oklch(0.65_0.2_240)]" },
+  { id: "simon",     title: "Simon Says",         emoji: "👃", to: "/games/simon"     as const, bg: "from-[oklch(0.85_0.16_60)] to-[oklch(0.72_0.2_25)]" },
+  { id: "yoga",      title: "Yoga Alphabet",      emoji: "🧘", to: "/games/yoga"      as const, bg: "from-[oklch(0.82_0.12_180)] to-[oklch(0.68_0.18_200)]" },
+  { id: "routine",   title: "Routine Builder",    emoji: "🪥", to: "/games/routine"   as const, bg: "from-[oklch(0.85_0.1_300)] to-[oklch(0.7_0.18_320)]" },
 ];
 
 function TvPage() {

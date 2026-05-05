@@ -21,30 +21,15 @@ export const Route = createFileRoute("/play")({
 });
 
 const GAMES = [
-  {
-    id: "alphabet",
-    title: "Air Letters",
-    emoji: "✍️",
-    sub: "Trace letters with your hand",
-    to: "/games/alphabet" as const,
-    bg: "bg-sunny text-sunny-foreground",
-  },
-  {
-    id: "colors",
-    title: "Color Hunt",
-    emoji: "🎨",
-    sub: "Find things with the right color",
-    to: "/games/colors" as const,
-    bg: "bg-sky text-sky-foreground",
-  },
-  {
-    id: "shapes",
-    title: "Shape Detective",
-    emoji: "🔺",
-    sub: "Show me a shape!",
-    to: "/games/shapes" as const,
-    bg: "bg-grass text-grass-foreground",
-  },
+  { id: "alphabet",  title: "Air Letters",      emoji: "✍️", sub: "Trace letters with your hand", to: "/games/alphabet"  as const, bg: "bg-sunny text-sunny-foreground" },
+  { id: "colors",    title: "Color Hunt",       emoji: "🎨", sub: "Find the right color",          to: "/games/colors"    as const, bg: "bg-sky text-sky-foreground" },
+  { id: "shapes",    title: "Shape Detective",  emoji: "🔺", sub: "Show me a shape!",              to: "/games/shapes"    as const, bg: "bg-grass text-grass-foreground" },
+  { id: "scavenger", title: "Scavenger Hunt",   emoji: "🔍", sub: "Find the color + shape",        to: "/games/scavenger" as const, bg: "bg-berry text-berry-foreground" },
+  { id: "animals",   title: "Animal Moves",     emoji: "🐸", sub: "Move like the animal",          to: "/games/animals"   as const, bg: "bg-sunny text-sunny-foreground" },
+  { id: "freeze",    title: "Musical Freeze",   emoji: "🎵", sub: "Dance, then FREEZE!",           to: "/games/freeze"    as const, bg: "bg-sky text-sky-foreground" },
+  { id: "simon",     title: "Simon Says",       emoji: "👃", sub: "Body parts + listening",        to: "/games/simon"     as const, bg: "bg-grass text-grass-foreground" },
+  { id: "yoga",      title: "Yoga Alphabet",    emoji: "🧘", sub: "Make letters with your body",   to: "/games/yoga"      as const, bg: "bg-berry text-berry-foreground" },
+  { id: "routine",   title: "Routine Builder",  emoji: "🪥", sub: "Order daily steps",             to: "/games/routine"   as const, bg: "bg-sunny text-sunny-foreground" },
 ];
 
 function PlayPage() {

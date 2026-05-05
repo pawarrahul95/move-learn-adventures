@@ -13,8 +13,14 @@ import { Route as TvRouteImport } from './routes/tv'
 import { Route as PlayRouteImport } from './routes/play'
 import { Route as CamRouteImport } from './routes/cam'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GamesYogaRouteImport } from './routes/games.yoga'
+import { Route as GamesSimonRouteImport } from './routes/games.simon'
 import { Route as GamesShapesRouteImport } from './routes/games.shapes'
+import { Route as GamesScavengerRouteImport } from './routes/games.scavenger'
+import { Route as GamesRoutineRouteImport } from './routes/games.routine'
+import { Route as GamesFreezeRouteImport } from './routes/games.freeze'
 import { Route as GamesColorsRouteImport } from './routes/games.colors'
+import { Route as GamesAnimalsRouteImport } from './routes/games.animals'
 import { Route as GamesAlphabetRouteImport } from './routes/games.alphabet'
 
 const TvRoute = TvRouteImport.update({
@@ -37,14 +43,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GamesYogaRoute = GamesYogaRouteImport.update({
+  id: '/games/yoga',
+  path: '/games/yoga',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesSimonRoute = GamesSimonRouteImport.update({
+  id: '/games/simon',
+  path: '/games/simon',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GamesShapesRoute = GamesShapesRouteImport.update({
   id: '/games/shapes',
   path: '/games/shapes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GamesScavengerRoute = GamesScavengerRouteImport.update({
+  id: '/games/scavenger',
+  path: '/games/scavenger',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesRoutineRoute = GamesRoutineRouteImport.update({
+  id: '/games/routine',
+  path: '/games/routine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesFreezeRoute = GamesFreezeRouteImport.update({
+  id: '/games/freeze',
+  path: '/games/freeze',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GamesColorsRoute = GamesColorsRouteImport.update({
   id: '/games/colors',
   path: '/games/colors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesAnimalsRoute = GamesAnimalsRouteImport.update({
+  id: '/games/animals',
+  path: '/games/animals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GamesAlphabetRoute = GamesAlphabetRouteImport.update({
@@ -59,8 +95,14 @@ export interface FileRoutesByFullPath {
   '/play': typeof PlayRoute
   '/tv': typeof TvRoute
   '/games/alphabet': typeof GamesAlphabetRoute
+  '/games/animals': typeof GamesAnimalsRoute
   '/games/colors': typeof GamesColorsRoute
+  '/games/freeze': typeof GamesFreezeRoute
+  '/games/routine': typeof GamesRoutineRoute
+  '/games/scavenger': typeof GamesScavengerRoute
   '/games/shapes': typeof GamesShapesRoute
+  '/games/simon': typeof GamesSimonRoute
+  '/games/yoga': typeof GamesYogaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -68,8 +110,14 @@ export interface FileRoutesByTo {
   '/play': typeof PlayRoute
   '/tv': typeof TvRoute
   '/games/alphabet': typeof GamesAlphabetRoute
+  '/games/animals': typeof GamesAnimalsRoute
   '/games/colors': typeof GamesColorsRoute
+  '/games/freeze': typeof GamesFreezeRoute
+  '/games/routine': typeof GamesRoutineRoute
+  '/games/scavenger': typeof GamesScavengerRoute
   '/games/shapes': typeof GamesShapesRoute
+  '/games/simon': typeof GamesSimonRoute
+  '/games/yoga': typeof GamesYogaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -78,8 +126,14 @@ export interface FileRoutesById {
   '/play': typeof PlayRoute
   '/tv': typeof TvRoute
   '/games/alphabet': typeof GamesAlphabetRoute
+  '/games/animals': typeof GamesAnimalsRoute
   '/games/colors': typeof GamesColorsRoute
+  '/games/freeze': typeof GamesFreezeRoute
+  '/games/routine': typeof GamesRoutineRoute
+  '/games/scavenger': typeof GamesScavengerRoute
   '/games/shapes': typeof GamesShapesRoute
+  '/games/simon': typeof GamesSimonRoute
+  '/games/yoga': typeof GamesYogaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -89,8 +143,14 @@ export interface FileRouteTypes {
     | '/play'
     | '/tv'
     | '/games/alphabet'
+    | '/games/animals'
     | '/games/colors'
+    | '/games/freeze'
+    | '/games/routine'
+    | '/games/scavenger'
     | '/games/shapes'
+    | '/games/simon'
+    | '/games/yoga'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -98,8 +158,14 @@ export interface FileRouteTypes {
     | '/play'
     | '/tv'
     | '/games/alphabet'
+    | '/games/animals'
     | '/games/colors'
+    | '/games/freeze'
+    | '/games/routine'
+    | '/games/scavenger'
     | '/games/shapes'
+    | '/games/simon'
+    | '/games/yoga'
   id:
     | '__root__'
     | '/'
@@ -107,8 +173,14 @@ export interface FileRouteTypes {
     | '/play'
     | '/tv'
     | '/games/alphabet'
+    | '/games/animals'
     | '/games/colors'
+    | '/games/freeze'
+    | '/games/routine'
+    | '/games/scavenger'
     | '/games/shapes'
+    | '/games/simon'
+    | '/games/yoga'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -117,8 +189,14 @@ export interface RootRouteChildren {
   PlayRoute: typeof PlayRoute
   TvRoute: typeof TvRoute
   GamesAlphabetRoute: typeof GamesAlphabetRoute
+  GamesAnimalsRoute: typeof GamesAnimalsRoute
   GamesColorsRoute: typeof GamesColorsRoute
+  GamesFreezeRoute: typeof GamesFreezeRoute
+  GamesRoutineRoute: typeof GamesRoutineRoute
+  GamesScavengerRoute: typeof GamesScavengerRoute
   GamesShapesRoute: typeof GamesShapesRoute
+  GamesSimonRoute: typeof GamesSimonRoute
+  GamesYogaRoute: typeof GamesYogaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -151,6 +229,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/games/yoga': {
+      id: '/games/yoga'
+      path: '/games/yoga'
+      fullPath: '/games/yoga'
+      preLoaderRoute: typeof GamesYogaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games/simon': {
+      id: '/games/simon'
+      path: '/games/simon'
+      fullPath: '/games/simon'
+      preLoaderRoute: typeof GamesSimonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/games/shapes': {
       id: '/games/shapes'
       path: '/games/shapes'
@@ -158,11 +250,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GamesShapesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/games/scavenger': {
+      id: '/games/scavenger'
+      path: '/games/scavenger'
+      fullPath: '/games/scavenger'
+      preLoaderRoute: typeof GamesScavengerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games/routine': {
+      id: '/games/routine'
+      path: '/games/routine'
+      fullPath: '/games/routine'
+      preLoaderRoute: typeof GamesRoutineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games/freeze': {
+      id: '/games/freeze'
+      path: '/games/freeze'
+      fullPath: '/games/freeze'
+      preLoaderRoute: typeof GamesFreezeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/games/colors': {
       id: '/games/colors'
       path: '/games/colors'
       fullPath: '/games/colors'
       preLoaderRoute: typeof GamesColorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games/animals': {
+      id: '/games/animals'
+      path: '/games/animals'
+      fullPath: '/games/animals'
+      preLoaderRoute: typeof GamesAnimalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/games/alphabet': {
@@ -181,8 +301,14 @@ const rootRouteChildren: RootRouteChildren = {
   PlayRoute: PlayRoute,
   TvRoute: TvRoute,
   GamesAlphabetRoute: GamesAlphabetRoute,
+  GamesAnimalsRoute: GamesAnimalsRoute,
   GamesColorsRoute: GamesColorsRoute,
+  GamesFreezeRoute: GamesFreezeRoute,
+  GamesRoutineRoute: GamesRoutineRoute,
+  GamesScavengerRoute: GamesScavengerRoute,
   GamesShapesRoute: GamesShapesRoute,
+  GamesSimonRoute: GamesSimonRoute,
+  GamesYogaRoute: GamesYogaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
