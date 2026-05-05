@@ -11,6 +11,7 @@ import { GameTopBar } from "@/components/GameTopBar";
 import { CenterMessage } from "@/components/CenterMessage";
 import { KidButton } from "@/components/KidButton";
 import { Celebration } from "@/components/Celebration";
+import { CosmoBubble } from "@/components/CosmoBubble";
 import { sfx, speak } from "@/lib/audio";
 import {
   classifyShape, COLOR_META, dominantColor, segmentObjectGray, traceContour,
@@ -188,11 +189,8 @@ function ShapeGame() {
       <GameTopBar profile={active} title="Shape Detective" />
 
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-3 sm:px-6">
-        <div className="mb-3 flex items-center justify-center gap-3 rounded-3xl bg-white px-4 py-3 shadow-cartoon">
-          <svg viewBox="0 0 100 100" className="h-12 w-12 text-primary">{targetData.svg}</svg>
-          <span className="text-display text-2xl font-bold capitalize sm:text-3xl">
-            Bring me a {target}!
-          </span>
+        <div className="mb-3 flex items-center justify-center">
+          <CosmoBubble message={`Bring me a ${target}!`} emoji={targetData.emoji} size="md" />
         </div>
 
         <div className="tv-stage-wrap relative aspect-[4/3] w-full overflow-hidden rounded-4xl bg-black shadow-cartoon">
@@ -219,6 +217,10 @@ function ShapeGame() {
             </div>
           )}
 
+          <div className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-extrabold uppercase text-primary shadow-pop">
+            🤖 Cosmo is scanning object…
+          </div>
+
           <div className="absolute bottom-3 left-3 right-3 flex items-center gap-3 rounded-full bg-white/90 px-4 py-2 shadow">
             <span className="text-sm font-bold text-muted-foreground">I see:</span>
             <span className="text-sm font-bold capitalize">{detected ?? "looking…"}</span>
@@ -242,7 +244,9 @@ function ShapeGame() {
       <Celebration
         open={celebrate}
         starsEarned={1}
-        message={`A ${target}! Great eyes!`}
+        totalStars={4}
+        message="TA-DA! YOU DID IT!"
+        onPlayAgain={() => { setCelebrate(false); matchedAtRef.current = null; setHoldProgress(0); }}
         onContinue={() => pickTarget(target)}
       />
     </main>
