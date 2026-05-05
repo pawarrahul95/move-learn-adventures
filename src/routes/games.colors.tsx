@@ -9,6 +9,7 @@ import { GameTopBar } from "@/components/GameTopBar";
 import { CenterMessage } from "@/components/CenterMessage";
 import { KidButton } from "@/components/KidButton";
 import { Celebration } from "@/components/Celebration";
+import { CosmoBubble } from "@/components/CosmoBubble";
 import { sfx, speak } from "@/lib/audio";
 import { COLOR_META, dominantColor, segmentObjectGray, type ColorName } from "@/lib/vision";
 
