@@ -146,14 +146,12 @@ function ColorGame() {
       <GameTopBar profile={active} title="Color Hunt" />
 
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-3 sm:px-6">
-        <div className="mb-3 flex items-center justify-center gap-3 rounded-3xl bg-white px-4 py-3 shadow-cartoon">
-          <span className="text-4xl">{targetData.emoji}</span>
-          <span className="text-display text-2xl font-bold sm:text-3xl">
-            Find something <span className="capitalize" style={{ color: targetData.swatch }}>{target}</span>!
-          </span>
-          <span
-            className="h-8 w-8 rounded-full border-2 border-white shadow-pop"
-            style={{ background: targetData.swatch }}
+        <div className="mb-3 flex items-center justify-center">
+          <CosmoBubble
+            message={`Find something ${target}!`}
+            emoji={targetData.emoji}
+            accent={targetData.swatch}
+            size="md"
           />
         </div>
 
@@ -214,7 +212,9 @@ function ColorGame() {
       <Celebration
         open={celebrate}
         starsEarned={1}
-        message={`${target.toUpperCase()}! Great find!`}
+        totalStars={4}
+        message="TA-DA! YOU DID IT!"
+        onPlayAgain={() => { setCelebrate(false); matchedAtRef.current = null; setHoldProgress(0); }}
         onContinue={() => pickTarget(target)}
       />
     </main>
