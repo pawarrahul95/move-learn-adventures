@@ -217,6 +217,10 @@ function ShapeGame() {
             </div>
           )}
 
+          <div className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-extrabold uppercase text-primary shadow-pop">
+            🤖 Cosmo is scanning object…
+          </div>
+
           <div className="absolute bottom-3 left-3 right-3 flex items-center gap-3 rounded-full bg-white/90 px-4 py-2 shadow">
             <span className="text-sm font-bold text-muted-foreground">I see:</span>
             <span className="text-sm font-bold capitalize">{detected ?? "looking…"}</span>
@@ -240,7 +244,9 @@ function ShapeGame() {
       <Celebration
         open={celebrate}
         starsEarned={1}
-        message={`A ${target}! Great eyes!`}
+        totalStars={4}
+        message="TA-DA! YOU DID IT!"
+        onPlayAgain={() => { setCelebrate(false); matchedAtRef.current = null; setHoldProgress(0); }}
         onContinue={() => pickTarget(target)}
       />
     </main>
