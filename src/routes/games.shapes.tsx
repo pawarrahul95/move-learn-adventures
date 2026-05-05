@@ -11,6 +11,7 @@ import { GameTopBar } from "@/components/GameTopBar";
 import { CenterMessage } from "@/components/CenterMessage";
 import { KidButton } from "@/components/KidButton";
 import { Celebration } from "@/components/Celebration";
+import { CosmoBubble } from "@/components/CosmoBubble";
 import { sfx, speak } from "@/lib/audio";
 import {
   classifyShape, COLOR_META, dominantColor, segmentObjectGray, traceContour,
@@ -188,11 +189,8 @@ function ShapeGame() {
       <GameTopBar profile={active} title="Shape Detective" />
 
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-3 sm:px-6">
-        <div className="mb-3 flex items-center justify-center gap-3 rounded-3xl bg-white px-4 py-3 shadow-cartoon">
-          <svg viewBox="0 0 100 100" className="h-12 w-12 text-primary">{targetData.svg}</svg>
-          <span className="text-display text-2xl font-bold capitalize sm:text-3xl">
-            Bring me a {target}!
-          </span>
+        <div className="mb-3 flex items-center justify-center">
+          <CosmoBubble message={`Bring me a ${target}!`} emoji={targetData.emoji} size="md" />
         </div>
 
         <div className="tv-stage-wrap relative aspect-[4/3] w-full overflow-hidden rounded-4xl bg-black shadow-cartoon">
