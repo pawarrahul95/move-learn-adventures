@@ -25,7 +25,18 @@ export const Route = createFileRoute("/games/freeze")({
   component: FreezeGame,
 });
 
-type Phase = "ready" | "dance" | "freeze" | "won" | "lost";
+type Phase = "ready" | "dance" | "freeze" | "puzzle" | "won" | "lost";
+
+type Puzzle = { question: string; options: { e: string; label: string }[]; answer: number };
+const PUZZLES: Puzzle[] = [
+  { question: "Which one is RED?",     options: [{ e: "🍎", label: "Apple" }, { e: "🥦", label: "Broccoli" }, { e: "🫐", label: "Blueberry" }], answer: 0 },
+  { question: "Which one is a CIRCLE?", options: [{ e: "🔺", label: "Triangle" }, { e: "⬛", label: "Square" }, { e: "🔵", label: "Circle" }], answer: 2 },
+  { question: "Which animal hops?",    options: [{ e: "🐢", label: "Turtle" }, { e: "🐰", label: "Bunny" }, { e: "🐟", label: "Fish" }], answer: 1 },
+  { question: "What comes after 2?",   options: [{ e: "1️⃣", label: "1" }, { e: "3️⃣", label: "3" }, { e: "5️⃣", label: "5" }], answer: 1 },
+  { question: "Which one is YELLOW?",  options: [{ e: "🌻", label: "Sunflower" }, { e: "🍇", label: "Grapes" }, { e: "🍆", label: "Eggplant" }], answer: 0 },
+];
+function pickPuzzle(): Puzzle { return PUZZLES[Math.floor(Math.random() * PUZZLES.length)]; }
+
 
 function playMelody() {
   // Reuse audio context from sfx by triggering a sequence of tones via a small loop
