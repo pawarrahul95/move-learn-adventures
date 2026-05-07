@@ -77,10 +77,15 @@ function FreezeGame() {
   const stopMusicRef = useRef<(() => void) | null>(null);
   const freezeStartRef = useRef<number>(0);
 
+  const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
+  const [puzzleFeedback, setPuzzleFeedback] = useState<"" | "good" | "bad">("");
+
   useEffect(() => () => { stopMusicRef.current?.(); }, []);
 
   const startRound = () => {
     setCelebrate(false);
+    setPuzzle(null);
+    setPuzzleFeedback("");
     setPhase("dance");
     speak("Dance! Dance! Dance!", { pitch: 1.4 });
     stopMusicRef.current = playMelody();
