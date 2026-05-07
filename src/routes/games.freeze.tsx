@@ -108,10 +108,11 @@ function FreezeGame() {
         setPhase("lost");
         sfx.fail();
       } else if (elapsed > 2500) {
-        if (active) { addStars(active.id, 1); setProgress(active.id, "freeze", Math.min(1, (active.progress.freeze ?? 0) + 0.15)); }
-        sfx.success();
-        setPhase("won");
-        setCelebrate(true);
+        sfx.pop();
+        const p = pickPuzzle();
+        setPuzzle(p);
+        setPhase("puzzle");
+        speak(p.question, { pitch: 1.35 });
       }
     }, 100);
     return () => clearInterval(id);
