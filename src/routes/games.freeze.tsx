@@ -144,10 +144,11 @@ function FreezeGame() {
             message={
               phase === "dance" ? "DANCE!" :
               phase === "freeze" ? "FREEZE!" :
+              phase === "puzzle" ? puzzle?.question ?? "Quick puzzle!" :
               phase === "lost" ? "Oops! Try again." :
               "Tap Start to dance!"
             }
-            emoji={phase === "freeze" ? "🧊" : "🎵"}
+            emoji={phase === "freeze" ? "🧊" : phase === "puzzle" ? "🧩" : "🎵"}
             size="md"
           />
         </div>
