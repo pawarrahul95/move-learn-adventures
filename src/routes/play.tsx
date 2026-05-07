@@ -68,7 +68,7 @@ function PlayPage() {
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {GAMES.map((g) => {
-            const progress = active?.progress[g.id as keyof typeof active.progress] ?? 0;
+            const progress = (active?.progress as Record<string, number> | undefined)?.[g.id] ?? 0;
             return (
               <Link
                 key={g.id}
