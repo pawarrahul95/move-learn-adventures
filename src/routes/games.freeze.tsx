@@ -120,6 +120,21 @@ function FreezeGame() {
 
   const next = () => { setRound((r) => r + 1); startRound(); };
 
+  const answerPuzzle = (i: number) => {
+    if (!puzzle || phase !== "puzzle") return;
+    if (i === puzzle.answer) {
+      setPuzzleFeedback("good");
+      sfx.success();
+      if (active) { addStars(active.id, 1); setProgress(active.id, "freeze", Math.min(1, (active.progress.freeze ?? 0) + 0.15)); }
+      setPhase("won");
+      setCelebrate(true);
+    } else {
+      setPuzzleFeedback("bad");
+      sfx.fail();
+      speak("Try again!", { pitch: 1.4 });
+    }
+  };
+
   return (
     <main className="flex min-h-dvh flex-col bg-gradient-sky">
       <GameTopBar profile={active} title="Musical Freeze" />
