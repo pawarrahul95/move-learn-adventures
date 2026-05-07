@@ -171,6 +171,24 @@ function FreezeGame() {
           </div>
         </div>
 
+        {phase === "puzzle" && puzzle && (
+          <div className={`mt-4 rounded-4xl bg-white p-4 shadow-cartoon ${puzzleFeedback === "bad" ? "ring-4 ring-destructive/60" : ""}`}>
+            <div className="mb-3 text-center text-display text-xl font-extrabold text-primary">{puzzle.question}</div>
+            <div className="grid grid-cols-3 gap-3">
+              {puzzle.options.map((o, i) => (
+                <button
+                  key={i}
+                  onClick={() => answerPuzzle(i)}
+                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-3xl bg-muted p-2 text-display font-extrabold shadow-cartoon transition-transform active:translate-y-1 hover:-translate-y-1"
+                >
+                  <span className="text-5xl">{o.e}</span>
+                  <span className="text-sm">{o.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="my-4 flex justify-center gap-3">
           {phase === "ready" && <button onClick={startRound} className="rounded-full bg-primary px-8 py-4 text-display text-2xl font-extrabold text-primary-foreground shadow-cartoon">▶ Start</button>}
           {phase === "lost" && <button onClick={startRound} className="rounded-full bg-berry px-8 py-4 text-display text-2xl font-extrabold text-berry-foreground shadow-cartoon">🔁 Try Again</button>}
