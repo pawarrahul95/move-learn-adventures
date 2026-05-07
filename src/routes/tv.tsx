@@ -35,6 +35,7 @@ export function tvSubscribe(cb: Listener) {
 export function tvStatus() { return tvBus.status; }
 
 const TILES = [
+  { id: "lessons",   title: "Lessons",            emoji: "📖", to: "/lessons"         as const, bg: "from-[oklch(0.85_0.1_300)] to-[oklch(0.7_0.18_320)]" },
   { id: "alphabet",  title: "Alphabet Adventure", emoji: "🔤", to: "/games/alphabet"  as const, bg: "from-[oklch(0.88_0.18_60)] to-[oklch(0.78_0.18_30)]" },
   { id: "colors",    title: "Color Catcher",      emoji: "🎨", to: "/games/colors"    as const, bg: "from-[oklch(0.78_0.15_230)] to-[oklch(0.7_0.18_270)]" },
   { id: "shapes",    title: "Shape Finder",       emoji: "🔺", to: "/games/shapes"    as const, bg: "from-[oklch(0.82_0.18_145)] to-[oklch(0.7_0.18_170)]" },

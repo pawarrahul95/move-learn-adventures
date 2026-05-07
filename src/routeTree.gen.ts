@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TvRouteImport } from './routes/tv'
 import { Route as PlayRouteImport } from './routes/play'
+import { Route as LessonsRouteImport } from './routes/lessons'
 import { Route as CamRouteImport } from './routes/cam'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GamesYogaRouteImport } from './routes/games.yoga'
@@ -31,6 +32,11 @@ const TvRoute = TvRouteImport.update({
 const PlayRoute = PlayRouteImport.update({
   id: '/play',
   path: '/play',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LessonsRoute = LessonsRouteImport.update({
+  id: '/lessons',
+  path: '/lessons',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CamRoute = CamRouteImport.update({
@@ -92,6 +98,7 @@ const GamesAlphabetRoute = GamesAlphabetRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cam': typeof CamRoute
+  '/lessons': typeof LessonsRoute
   '/play': typeof PlayRoute
   '/tv': typeof TvRoute
   '/games/alphabet': typeof GamesAlphabetRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cam': typeof CamRoute
+  '/lessons': typeof LessonsRoute
   '/play': typeof PlayRoute
   '/tv': typeof TvRoute
   '/games/alphabet': typeof GamesAlphabetRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/cam': typeof CamRoute
+  '/lessons': typeof LessonsRoute
   '/play': typeof PlayRoute
   '/tv': typeof TvRoute
   '/games/alphabet': typeof GamesAlphabetRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/cam'
+    | '/lessons'
     | '/play'
     | '/tv'
     | '/games/alphabet'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/cam'
+    | '/lessons'
     | '/play'
     | '/tv'
     | '/games/alphabet'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/cam'
+    | '/lessons'
     | '/play'
     | '/tv'
     | '/games/alphabet'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CamRoute: typeof CamRoute
+  LessonsRoute: typeof LessonsRoute
   PlayRoute: typeof PlayRoute
   TvRoute: typeof TvRoute
   GamesAlphabetRoute: typeof GamesAlphabetRoute
@@ -213,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/play'
       fullPath: '/play'
       preLoaderRoute: typeof PlayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lessons': {
+      id: '/lessons'
+      path: '/lessons'
+      fullPath: '/lessons'
+      preLoaderRoute: typeof LessonsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cam': {
@@ -298,6 +318,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CamRoute: CamRoute,
+  LessonsRoute: LessonsRoute,
   PlayRoute: PlayRoute,
   TvRoute: TvRoute,
   GamesAlphabetRoute: GamesAlphabetRoute,

@@ -21,6 +21,7 @@ export const Route = createFileRoute("/play")({
 });
 
 const GAMES = [
+  { id: "lessons",   title: "Lessons",          emoji: "📖", sub: "Letters, numbers, colors",     to: "/lessons"         as const, bg: "bg-berry text-berry-foreground" },
   { id: "alphabet",  title: "Air Letters",      emoji: "✍️", sub: "Trace letters with your hand", to: "/games/alphabet"  as const, bg: "bg-sunny text-sunny-foreground" },
   { id: "colors",    title: "Color Hunt",       emoji: "🎨", sub: "Find the right color",          to: "/games/colors"    as const, bg: "bg-sky text-sky-foreground" },
   { id: "shapes",    title: "Shape Detective",  emoji: "🔺", sub: "Show me a shape!",              to: "/games/shapes"    as const, bg: "bg-grass text-grass-foreground" },
@@ -67,7 +68,7 @@ function PlayPage() {
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {GAMES.map((g) => {
-            const progress = active?.progress[g.id as keyof typeof active.progress] ?? 0;
+            const progress = (active?.progress as Record<string, number> | undefined)?.[g.id] ?? 0;
             return (
               <Link
                 key={g.id}
