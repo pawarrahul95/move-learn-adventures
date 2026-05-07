@@ -25,7 +25,18 @@ export const Route = createFileRoute("/games/freeze")({
   component: FreezeGame,
 });
 
-type Phase = "ready" | "dance" | "freeze" | "won" | "lost";
+type Phase = "ready" | "dance" | "freeze" | "puzzle" | "won" | "lost";
+
+type Puzzle = { question: string; options: { e: string; label: string }[]; answer: number };
+const PUZZLES: Puzzle[] = [
+  { question: "Which one is RED?",     options: [{ e: "🍎", label: "Apple" }, { e: "🥦", label: "Broccoli" }, { e: "🫐", label: "Blueberry" }], answer: 0 },
+  { question: "Which one is a CIRCLE?", options: [{ e: "🔺", label: "Triangle" }, { e: "⬛", label: "Square" }, { e: "🔵", label: "Circle" }], answer: 2 },
+  { question: "Which animal hops?",    options: [{ e: "🐢", label: "Turtle" }, { e: "🐰", label: "Bunny" }, { e: "🐟", label: "Fish" }], answer: 1 },
+  { question: "What comes after 2?",   options: [{ e: "1️⃣", label: "1" }, { e: "3️⃣", label: "3" }, { e: "5️⃣", label: "5" }], answer: 1 },
+  { question: "Which one is YELLOW?",  options: [{ e: "🌻", label: "Sunflower" }, { e: "🍇", label: "Grapes" }, { e: "🍆", label: "Eggplant" }], answer: 0 },
+];
+function pickPuzzle(): Puzzle { return PUZZLES[Math.floor(Math.random() * PUZZLES.length)]; }
+
 
 function playMelody() {
   // Reuse audio context from sfx by triggering a sequence of tones via a small loop
@@ -66,10 +77,15 @@ function FreezeGame() {
   const stopMusicRef = useRef<(() => void) | null>(null);
   const freezeStartRef = useRef<number>(0);
 
+  const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
+  const [puzzleFeedback, setPuzzleFeedback] = useState<"" | "good" | "bad">("");
+
   useEffect(() => () => { stopMusicRef.current?.(); }, []);
 
   const startRound = () => {
     setCelebrate(false);
+    setPuzzle(null);
+    setPuzzleFeedback("");
     setPhase("dance");
     speak("Dance! Dance! Dance!", { pitch: 1.4 });
     stopMusicRef.current = playMelody();
@@ -92,16 +108,32 @@ function FreezeGame() {
         setPhase("lost");
         sfx.fail();
       } else if (elapsed > 2500) {
-        if (active) { addStars(active.id, 1); setProgress(active.id, "freeze", Math.min(1, (active.progress.freeze ?? 0) + 0.15)); }
-        sfx.success();
-        setPhase("won");
-        setCelebrate(true);
+        sfx.pop();
+        const p = pickPuzzle();
+        setPuzzle(p);
+        setPhase("puzzle");
+        speak(p.question, { pitch: 1.35 });
       }
     }, 100);
     return () => clearInterval(id);
   }, [phase, motion.intensity, active]);
 
   const next = () => { setRound((r) => r + 1); startRound(); };
+
+  const answerPuzzle = (i: number) => {
+    if (!puzzle || phase !== "puzzle") return;
+    if (i === puzzle.answer) {
+      setPuzzleFeedback("good");
+      sfx.success();
+      if (active) { addStars(active.id, 1); setProgress(active.id, "freeze", Math.min(1, (active.progress.freeze ?? 0) + 0.15)); }
+      setPhase("won");
+      setCelebrate(true);
+    } else {
+      setPuzzleFeedback("bad");
+      sfx.fail();
+      speak("Try again!", { pitch: 1.4 });
+    }
+  };
 
   return (
     <main className="flex min-h-dvh flex-col bg-gradient-sky">
@@ -112,10 +144,11 @@ function FreezeGame() {
             message={
               phase === "dance" ? "DANCE!" :
               phase === "freeze" ? "FREEZE!" :
+              phase === "puzzle" ? puzzle?.question ?? "Quick puzzle!" :
               phase === "lost" ? "Oops! Try again." :
               "Tap Start to dance!"
             }
-            emoji={phase === "freeze" ? "🧊" : "🎵"}
+            emoji={phase === "freeze" ? "🧊" : phase === "puzzle" ? "🧩" : "🎵"}
             size="md"
           />
         </div>
@@ -137,6 +170,24 @@ function FreezeGame() {
             </div>
           </div>
         </div>
+
+        {phase === "puzzle" && puzzle && (
+          <div className={`mt-4 rounded-4xl bg-white p-4 shadow-cartoon ${puzzleFeedback === "bad" ? "ring-4 ring-destructive/60" : ""}`}>
+            <div className="mb-3 text-center text-display text-xl font-extrabold text-primary">{puzzle.question}</div>
+            <div className="grid grid-cols-3 gap-3">
+              {puzzle.options.map((o, i) => (
+                <button
+                  key={i}
+                  onClick={() => answerPuzzle(i)}
+                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-3xl bg-muted p-2 text-display font-extrabold shadow-cartoon transition-transform active:translate-y-1 hover:-translate-y-1"
+                >
+                  <span className="text-5xl">{o.e}</span>
+                  <span className="text-sm">{o.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="my-4 flex justify-center gap-3">
           {phase === "ready" && <button onClick={startRound} className="rounded-full bg-primary px-8 py-4 text-display text-2xl font-extrabold text-primary-foreground shadow-cartoon">▶ Start</button>}
