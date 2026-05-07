@@ -42,7 +42,9 @@ function HomePage() {
   return (
     <main className="min-h-dvh bg-gradient-sky">
       <div className="mx-auto flex min-h-dvh max-w-5xl flex-col items-center px-4 py-6 sm:py-10">
-        <div className="flex flex-col items-center gap-2 text-center">
+        <div className="relative flex flex-col items-center gap-2 text-center">
+          <span className="absolute -left-4 top-2 rotate-[-12deg] rounded-2xl bg-secondary px-3 py-1 text-sm font-extrabold text-secondary-foreground shadow-cartoon sm:text-base">Hi!</span>
+          <span className="absolute -right-2 top-10 rotate-[8deg] rounded-2xl bg-sunny px-3 py-1 text-sm font-extrabold text-sunny-foreground shadow-cartoon sm:text-base">Hello</span>
           <img
             src={mascot}
             alt="PlayLearn mascot fox waving"
@@ -50,10 +52,10 @@ function HomePage() {
             height={200}
             className="h-32 w-32 animate-float drop-shadow-xl sm:h-40 sm:w-40"
           />
-          <h1 className="text-display text-5xl font-bold tracking-tight sm:text-7xl">
-            <span className="bg-gradient-rainbow animate-rainbow bg-clip-text text-transparent">
-              PlayLearn
-            </span>
+          <h1 className="text-display text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">
+            Let&apos;s Start Your{" "}
+            <span className="bg-gradient-rainbow animate-rainbow bg-clip-text text-transparent">Learning</span>{" "}
+            Adventure
           </h1>
           <p className="text-lg font-bold text-sky-foreground sm:text-xl">
             Move • Learn • Play
