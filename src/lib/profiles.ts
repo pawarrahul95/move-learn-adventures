@@ -53,7 +53,7 @@ export function createProfile(input: { name: string; age: number; avatar: Avatar
     age: Math.max(3, Math.min(7, Math.round(input.age))),
     avatar: input.avatar,
     stars: 0,
-    progress: { alphabet: 0, colors: 0, shapes: 0, scavenger: 0, animals: 0, freeze: 0, simon: 0, yoga: 0, routine: 0 },
+    progress: { alphabet: 0, colors: 0, shapes: 0, scavenger: 0, animals: 0, freeze: 0, simon: 0, yoga: 0, routine: 0, fruit: 0 },
     lettersLearned: [],
     createdAt: Date.now(),
   };
