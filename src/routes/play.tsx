@@ -31,6 +31,7 @@ const GAMES = [
   { id: "simon",     title: "Simon Says",       emoji: "👃", sub: "Body parts + listening",        to: "/games/simon"     as const, bg: "bg-grass text-grass-foreground" },
   { id: "yoga",      title: "Yoga Alphabet",    emoji: "🧘", sub: "Make letters with your body",   to: "/games/yoga"      as const, bg: "bg-berry text-berry-foreground" },
   { id: "routine",   title: "Routine Builder",  emoji: "🪥", sub: "Order daily steps",             to: "/games/routine"   as const, bg: "bg-sunny text-sunny-foreground" },
+  { id: "fruit",     title: "Fruit Slicer",     emoji: "🍉", sub: "Slice fruits with your hand!",  to: "/games/fruit"     as const, bg: "bg-sky text-sky-foreground" },
 ];
 
 function PlayPage() {
