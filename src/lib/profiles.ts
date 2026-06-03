@@ -12,7 +12,8 @@ export const AVATARS: { id: Avatar; emoji: string; bg: string }[] = [
 
 export type GameId =
   | "alphabet" | "colors" | "shapes"
-  | "scavenger" | "animals" | "freeze" | "simon" | "yoga" | "routine";
+  | "scavenger" | "animals" | "freeze" | "simon" | "yoga" | "routine"
+  | "fruit";
 
 export type Profile = {
   id: string;
