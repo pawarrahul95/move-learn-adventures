@@ -45,6 +45,7 @@ const TILES = [
   { id: "simon",     title: "Simon Says",         emoji: "👃", to: "/games/simon"     as const, bg: "from-[oklch(0.85_0.16_60)] to-[oklch(0.72_0.2_25)]" },
   { id: "yoga",      title: "Yoga Alphabet",      emoji: "🧘", to: "/games/yoga"      as const, bg: "from-[oklch(0.82_0.12_180)] to-[oklch(0.68_0.18_200)]" },
   { id: "routine",   title: "Routine Builder",    emoji: "🪥", to: "/games/routine"   as const, bg: "from-[oklch(0.85_0.1_300)] to-[oklch(0.7_0.18_320)]" },
+  { id: "fruit",     title: "Fruit Slicer",       emoji: "🍉", to: "/games/fruit"     as const, bg: "from-[oklch(0.82_0.18_25)] to-[oklch(0.7_0.2_5)]" },
 ];
 
 function TvPage() {
