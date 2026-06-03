@@ -19,6 +19,7 @@ import { Route as GamesSimonRouteImport } from './routes/games.simon'
 import { Route as GamesShapesRouteImport } from './routes/games.shapes'
 import { Route as GamesScavengerRouteImport } from './routes/games.scavenger'
 import { Route as GamesRoutineRouteImport } from './routes/games.routine'
+import { Route as GamesFruitRouteImport } from './routes/games.fruit'
 import { Route as GamesFreezeRouteImport } from './routes/games.freeze'
 import { Route as GamesColorsRouteImport } from './routes/games.colors'
 import { Route as GamesAnimalsRouteImport } from './routes/games.animals'
@@ -74,6 +75,11 @@ const GamesRoutineRoute = GamesRoutineRouteImport.update({
   path: '/games/routine',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GamesFruitRoute = GamesFruitRouteImport.update({
+  id: '/games/fruit',
+  path: '/games/fruit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GamesFreezeRoute = GamesFreezeRouteImport.update({
   id: '/games/freeze',
   path: '/games/freeze',
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/games/animals': typeof GamesAnimalsRoute
   '/games/colors': typeof GamesColorsRoute
   '/games/freeze': typeof GamesFreezeRoute
+  '/games/fruit': typeof GamesFruitRoute
   '/games/routine': typeof GamesRoutineRoute
   '/games/scavenger': typeof GamesScavengerRoute
   '/games/shapes': typeof GamesShapesRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/games/animals': typeof GamesAnimalsRoute
   '/games/colors': typeof GamesColorsRoute
   '/games/freeze': typeof GamesFreezeRoute
+  '/games/fruit': typeof GamesFruitRoute
   '/games/routine': typeof GamesRoutineRoute
   '/games/scavenger': typeof GamesScavengerRoute
   '/games/shapes': typeof GamesShapesRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/games/animals': typeof GamesAnimalsRoute
   '/games/colors': typeof GamesColorsRoute
   '/games/freeze': typeof GamesFreezeRoute
+  '/games/fruit': typeof GamesFruitRoute
   '/games/routine': typeof GamesRoutineRoute
   '/games/scavenger': typeof GamesScavengerRoute
   '/games/shapes': typeof GamesShapesRoute
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/games/animals'
     | '/games/colors'
     | '/games/freeze'
+    | '/games/fruit'
     | '/games/routine'
     | '/games/scavenger'
     | '/games/shapes'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/games/animals'
     | '/games/colors'
     | '/games/freeze'
+    | '/games/fruit'
     | '/games/routine'
     | '/games/scavenger'
     | '/games/shapes'
@@ -188,6 +199,7 @@ export interface FileRouteTypes {
     | '/games/animals'
     | '/games/colors'
     | '/games/freeze'
+    | '/games/fruit'
     | '/games/routine'
     | '/games/scavenger'
     | '/games/shapes'
@@ -205,6 +217,7 @@ export interface RootRouteChildren {
   GamesAnimalsRoute: typeof GamesAnimalsRoute
   GamesColorsRoute: typeof GamesColorsRoute
   GamesFreezeRoute: typeof GamesFreezeRoute
+  GamesFruitRoute: typeof GamesFruitRoute
   GamesRoutineRoute: typeof GamesRoutineRoute
   GamesScavengerRoute: typeof GamesScavengerRoute
   GamesShapesRoute: typeof GamesShapesRoute
@@ -284,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GamesRoutineRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/games/fruit': {
+      id: '/games/fruit'
+      path: '/games/fruit'
+      fullPath: '/games/fruit'
+      preLoaderRoute: typeof GamesFruitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/games/freeze': {
       id: '/games/freeze'
       path: '/games/freeze'
@@ -325,6 +345,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesAnimalsRoute: GamesAnimalsRoute,
   GamesColorsRoute: GamesColorsRoute,
   GamesFreezeRoute: GamesFreezeRoute,
+  GamesFruitRoute: GamesFruitRoute,
   GamesRoutineRoute: GamesRoutineRoute,
   GamesScavengerRoute: GamesScavengerRoute,
   GamesShapesRoute: GamesShapesRoute,
@@ -334,12 +355,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
