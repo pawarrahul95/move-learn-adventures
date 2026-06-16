@@ -245,8 +245,7 @@ function FruitGame() {
     setPhase("ended");
     const s = scoreRef.current;
     if (active && s > 0) {
-      const stars = s >= 25 ? 3 : s >= 12 ? 2 : 1;
-      addStars(active.id, stars);
+      addStars(active.id, 3);
       setProgress(active.id, "fruit", Math.min(1, s / 30));
       setCelebrate(true);
     }
@@ -305,7 +304,7 @@ function FruitGame() {
 
       <Celebration
         open={celebrate}
-        starsEarned={score >= 25 ? 3 : score >= 12 ? 2 : 1}
+        starsEarned={3}
         totalStars={3}
         message={`SLICED ${score} FRUITS!`}
         onPlayAgain={() => { setCelebrate(false); if (difficulty) startRound(difficulty); }}

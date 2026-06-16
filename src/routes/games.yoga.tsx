@@ -57,7 +57,7 @@ function YogaGame() {
         const HOLD = 3000;
         setHeld(Math.min(1, elapsed / HOLD));
         if (elapsed >= HOLD && !celebrate) {
-          if (active) { addStars(active.id, 1); setProgress(active.id, "yoga", (idx + 1) / POSES.length); }
+          if (active) { addStars(active.id, 3); setProgress(active.id, "yoga", (idx + 1) / POSES.length); }
           sfx.success();
           setCelebrate(true);
         }
@@ -108,8 +108,8 @@ function YogaGame() {
 
       <Celebration
         open={celebrate}
-        starsEarned={1}
-        totalStars={4}
+        starsEarned={3}
+        totalStars={3}
         message={`PERFECT ${cur.letter} POSE!`}
         onPlayAgain={() => { setCelebrate(false); heldStartRef.current = null; setHeld(0); }}
         onContinue={next}
