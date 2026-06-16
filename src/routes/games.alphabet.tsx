@@ -108,7 +108,9 @@ function AlphabetGame() {
   // Coverage updates UI ~5x/sec via rAF tick — avoids React renders per frame.
   const [coverage, setCoverage] = useState(0);
   const [celebrate, setCelebrate] = useState(false);
+  const [earnedStars, setEarnedStars] = useState(1);
   const celebrateRef = useRef(false);
+  const startTimeRef = useRef<number>(performance.now());
 
   // Resize canvas to wrapper, recompute target points for current letter.
   const resizeAndReset = useCallback(() => {
@@ -148,6 +150,7 @@ function AlphabetGame() {
     speak(`Trace the letter ${letter}`);
     celebrateRef.current = false;
     setCelebrate(false);
+    startTimeRef.current = performance.now();
   }, [letter]);
 
   // Stash latest fingertip (normalized) in a ref so the rAF loop has access
@@ -241,9 +244,15 @@ function AlphabetGame() {
           if (cov >= 0.85 && !celebrateRef.current) {
             celebrateRef.current = true;
             running = false;
+            // Star tiers: coverage + time bonus
+            const elapsed = (performance.now() - startTimeRef.current) / 1000;
+            let stars = 1;
+            if (cov >= 0.92) stars = 2;
+            if (cov >= 0.97 || (cov >= 0.92 && elapsed <= 20)) stars = 3;
+            setEarnedStars(stars);
             if (active) {
               addLetter(active.id, letter);
-              addStars(active.id, 1);
+              addStars(active.id, stars);
             }
             sfx.success();
             setCelebrate(true);
@@ -334,8 +343,9 @@ function AlphabetGame() {
 
       <Celebration
         open={celebrate}
-        starsEarned={1}
-        message={`${letter}! Awesome!`}
+        starsEarned={earnedStars}
+        totalStars={3}
+        message={`${letter}! ${earnedStars === 3 ? "Perfect!" : earnedStars === 2 ? "Great job!" : "Nice!"}`}
         onContinue={next}
       />
     </main>
