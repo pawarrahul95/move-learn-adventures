@@ -244,9 +244,15 @@ function AlphabetGame() {
           if (cov >= 0.85 && !celebrateRef.current) {
             celebrateRef.current = true;
             running = false;
+            // Star tiers: coverage + time bonus
+            const elapsed = (performance.now() - startTimeRef.current) / 1000;
+            let stars = 1;
+            if (cov >= 0.92) stars = 2;
+            if (cov >= 0.97 || (cov >= 0.92 && elapsed <= 20)) stars = 3;
+            setEarnedStars(stars);
             if (active) {
               addLetter(active.id, letter);
-              addStars(active.id, 1);
+              addStars(active.id, stars);
             }
             sfx.success();
             setCelebrate(true);
