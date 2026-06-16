@@ -230,8 +230,8 @@ function SimonGame() {
 
       <Celebration
         open={celebrate}
-        starsEarned={1}
-        totalStars={4}
+        starsEarned={3}
+        totalStars={3}
         message="GREAT LISTENING!"
         onPlayAgain={() => { setCelebrate(false); }}
         onContinue={() => { setCelebrate(false); next(); }}

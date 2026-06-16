@@ -108,8 +108,8 @@ function YogaGame() {
 
       <Celebration
         open={celebrate}
-        starsEarned={1}
-        totalStars={4}
+        starsEarned={3}
+        totalStars={3}
         message={`PERFECT ${cur.letter} POSE!`}
         onPlayAgain={() => { setCelebrate(false); heldStartRef.current = null; setHeld(0); }}
         onContinue={next}

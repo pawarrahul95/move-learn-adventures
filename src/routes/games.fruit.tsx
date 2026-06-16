@@ -304,7 +304,7 @@ function FruitGame() {
 
       <Celebration
         open={celebrate}
-        starsEarned={score >= 25 ? 3 : score >= 12 ? 2 : 1}
+        starsEarned={3}
         totalStars={3}
         message={`SLICED ${score} FRUITS!`}
         onPlayAgain={() => { setCelebrate(false); if (difficulty) startRound(difficulty); }}

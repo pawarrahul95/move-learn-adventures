@@ -197,8 +197,8 @@ function FreezeGame() {
 
       <Celebration
         open={celebrate}
-        starsEarned={1}
-        totalStars={4}
+        starsEarned={3}
+        totalStars={3}
         message="PERFECT FREEZE!"
         onPlayAgain={startRound}
         onContinue={next}
