@@ -343,8 +343,9 @@ function AlphabetGame() {
 
       <Celebration
         open={celebrate}
-        starsEarned={1}
-        message={`${letter}! Awesome!`}
+        starsEarned={earnedStars}
+        totalStars={3}
+        message={`${letter}! ${earnedStars === 3 ? "Perfect!" : earnedStars === 2 ? "Great job!" : "Nice!"}`}
         onContinue={next}
       />
     </main>
