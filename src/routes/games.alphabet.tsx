@@ -108,7 +108,9 @@ function AlphabetGame() {
   // Coverage updates UI ~5x/sec via rAF tick — avoids React renders per frame.
   const [coverage, setCoverage] = useState(0);
   const [celebrate, setCelebrate] = useState(false);
+  const [earnedStars, setEarnedStars] = useState(1);
   const celebrateRef = useRef(false);
+  const startTimeRef = useRef<number>(performance.now());
 
   // Resize canvas to wrapper, recompute target points for current letter.
   const resizeAndReset = useCallback(() => {
