@@ -65,7 +65,7 @@ function FruitGame() {
 
   const cameraActive = phase === "playing";
   const { videoRef, ready, error } = useCamera(cameraActive, "user");
-  const { tip, modelReady } = useFingertip({ mode: "local", video: videoRef.current, ready });
+  const { tipRef, modelReady } = useFingertip({ mode: "local", video: videoRef.current, ready });
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
