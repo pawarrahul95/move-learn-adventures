@@ -65,7 +65,7 @@ function FruitGame() {
 
   const cameraActive = phase === "playing";
   const { videoRef, ready, error } = useCamera(cameraActive, "user");
-  const { tip, modelReady } = useFingertip({ mode: "local", video: videoRef.current, ready });
+  const { tipRef, modelReady } = useFingertip({ mode: "local", video: videoRef.current, ready });
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -120,18 +120,22 @@ function FruitGame() {
       if (cvs.width !== w || cvs.height !== h) { cvs.width = w; cvs.height = h; }
       const ctx = cvs.getContext("2d"); if (!ctx) { raf = requestAnimationFrame(loop); return; }
 
+      // Read latest fingertip from ref (updated every frame by useFingertip).
+      const tip = tipRef.current;
       // Mirror fingertip horizontally (camera is mirrored on screen)
       const fx = tip.present ? (1 - tip.x) : -1;
       const fy = tip.present ? tip.y : -1;
       const tNow = now;
       if (tip.present) {
         trailRef.current.push({ x: fx, y: fy, t: tNow });
-        if (trailRef.current.length > 18) trailRef.current.shift();
+        if (trailRef.current.length > 24) trailRef.current.shift();
       }
-      // Compute fingertip speed
+      // Compute fingertip speed + segment from previous frame
       let speed = 0;
+      let pfx = fx, pfy = fy;
       if (tip.present && lastTipRef.current) {
-        const dx = fx - lastTipRef.current.x; const dy = fy - lastTipRef.current.y;
+        pfx = lastTipRef.current.x; pfy = lastTipRef.current.y;
+        const dx = fx - pfx; const dy = fy - pfy;
         const ddt = Math.max(0.001, (tNow - lastTipRef.current.t) / 1000);
         speed = Math.hypot(dx, dy) / ddt;
       }
@@ -143,11 +147,22 @@ function FruitGame() {
         it.y += it.vy * dt;
         it.x += it.vx * dt;
         it.rot += it.vrot * dt;
-        // Slice detection: fingertip within radius AND moving fast
-        if (tip.present && speed > 0.6) {
-          const dx = fx - it.x, dy = fy - it.y;
-          if (Math.hypot(dx, dy) < 0.09) {
+        // Slice detection: segment-circle distance from previous→current tip.
+        // Catches fast swipes that would skip over the fruit between frames.
+        if (tip.present && speed > 0.35) {
+          const sx = fx - pfx, sy = fy - pfy;
+          const len2 = sx * sx + sy * sy;
+          let d2: number;
+          if (len2 < 1e-6) {
+            const dx = fx - it.x, dy = fy - it.y; d2 = dx * dx + dy * dy;
+          } else {
+            const t = Math.max(0, Math.min(1, ((it.x - pfx) * sx + (it.y - pfy) * sy) / len2));
+            const cx = pfx + t * sx, cy = pfy + t * sy;
+            const dx = cx - it.x, dy = cy - it.y; d2 = dx * dx + dy * dy;
+          }
+          if (d2 < 0.11 * 0.11) {
             it.sliced = true;
+            it.spawned = now; // repurpose as slice time for fade
             if (it.isBomb) {
               sfx.fail();
               livesRef.current = Math.max(0, livesRef.current - 1);
@@ -161,36 +176,30 @@ function FruitGame() {
           }
         }
       }
-      // Remove off-screen / sliced after delay
+      // Cleanup: drop off-screen or expired sliced items
       itemsRef.current = itemsRef.current.filter((it) => {
-        if (it.sliced) return now - it.spawned < 60000 && (now - it.spawned) % 1 < 800; // keep briefly handled below
-        if (it.y > 1.15) {
-          if (!it.isBomb) {
-            // missed a fruit — lose a life only on Hard? Keep gentle: no life loss for misses
-          }
-          return false;
-        }
-        return true;
+        if (it.sliced) return now - it.spawned < 350;
+        return it.y < 1.15;
       });
-      // Actually drop sliced after 250ms with fade
-      itemsRef.current = itemsRef.current.filter((it) => !(it.sliced && now - it.spawned > 60000));
 
       // Draw
       ctx.clearRect(0, 0, w, h);
       // Trail
-      if (trailRef.current.length > 1) {
+      const pts = trailRef.current.filter((p) => tNow - p.t < 260);
+      trailRef.current = pts;
+      if (pts.length > 1) {
         ctx.lineCap = "round"; ctx.lineJoin = "round";
-        ctx.strokeStyle = "rgba(255,255,255,0.85)";
-        ctx.shadowColor = "rgba(255,180,0,0.9)"; ctx.shadowBlur = 16;
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        const pts = trailRef.current.filter((p) => tNow - p.t < 220);
-        trailRef.current = pts;
-        pts.forEach((p, i) => {
-          const X = p.x * w, Y = p.y * h;
-          if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
-        });
-        ctx.stroke();
+        ctx.shadowColor = "rgba(255,180,0,0.9)"; ctx.shadowBlur = 18;
+        // Tapered trail: draw segments with varying width/opacity
+        for (let i = 1; i < pts.length; i++) {
+          const a = i / pts.length;
+          ctx.strokeStyle = `rgba(255,255,255,${0.15 + 0.75 * a})`;
+          ctx.lineWidth = 2 + 10 * a;
+          ctx.beginPath();
+          ctx.moveTo(pts[i - 1].x * w, pts[i - 1].y * h);
+          ctx.lineTo(pts[i].x * w, pts[i].y * h);
+          ctx.stroke();
+        }
         ctx.shadowBlur = 0;
       }
       // Items
@@ -202,7 +211,11 @@ function FruitGame() {
         ctx.save();
         ctx.translate(X, Y);
         ctx.rotate(it.rot);
-        if (it.sliced) { ctx.globalAlpha = 0.4; ctx.scale(1.3, 1.3); }
+        if (it.sliced) {
+          const age = (now - it.spawned) / 350;
+          ctx.globalAlpha = Math.max(0, 1 - age);
+          ctx.scale(1 + age * 0.6, 1 + age * 0.6);
+        }
         ctx.fillText(it.emoji, 0, 0);
         ctx.restore();
       }
@@ -217,8 +230,7 @@ function FruitGame() {
     };
     raf = requestAnimationFrame(loop);
     return () => { running = false; cancelAnimationFrame(raf); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, tip.x, tip.y, tip.present]);
+  }, [phase]);
 
   function startRound(d: Difficulty) {
     setDifficulty(d);
