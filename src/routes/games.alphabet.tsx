@@ -150,6 +150,7 @@ function AlphabetGame() {
     speak(`Trace the letter ${letter}`);
     celebrateRef.current = false;
     setCelebrate(false);
+    startTimeRef.current = performance.now();
   }, [letter]);
 
   // Stash latest fingertip (normalized) in a ref so the rAF loop has access
