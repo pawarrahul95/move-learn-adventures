@@ -167,7 +167,7 @@ function SimonGame() {
                   setFeedback("good");
                   cooldownRef.current = 45; holdRef.current = 0;
                   if (streakRef.current >= 5) {
-                    if (active) { addStars(active.id, 1); setProgress(active.id, "simon", Math.min(1, (active.progress.simon ?? 0) + 0.1)); }
+                    if (active) { addStars(active.id, 3); setProgress(active.id, "simon", Math.min(1, (active.progress.simon ?? 0) + 0.1)); }
                     streakRef.current = 0; setStreak(0);
                     setCelebrate(true);
                   } else {

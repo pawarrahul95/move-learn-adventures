@@ -57,7 +57,7 @@ function YogaGame() {
         const HOLD = 3000;
         setHeld(Math.min(1, elapsed / HOLD));
         if (elapsed >= HOLD && !celebrate) {
-          if (active) { addStars(active.id, 1); setProgress(active.id, "yoga", (idx + 1) / POSES.length); }
+          if (active) { addStars(active.id, 3); setProgress(active.id, "yoga", (idx + 1) / POSES.length); }
           sfx.success();
           setCelebrate(true);
         }

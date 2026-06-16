@@ -125,7 +125,7 @@ function FreezeGame() {
     if (i === puzzle.answer) {
       setPuzzleFeedback("good");
       sfx.success();
-      if (active) { addStars(active.id, 1); setProgress(active.id, "freeze", Math.min(1, (active.progress.freeze ?? 0) + 0.15)); }
+      if (active) { addStars(active.id, 3); setProgress(active.id, "freeze", Math.min(1, (active.progress.freeze ?? 0) + 0.15)); }
       setPhase("won");
       setCelebrate(true);
     } else {
