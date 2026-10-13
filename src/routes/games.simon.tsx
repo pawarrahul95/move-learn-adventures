@@ -44,24 +44,34 @@ interface BodyPart {
 
 function avg(a: Lm, b: Lm) { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
 function dist(a: { x: number; y: number }, b: { x: number; y: number }) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function visible(point: Lm | undefined, min = 0.45): point is Lm {
+  return !!point && (point.visibility === undefined || point.visibility >= min);
+}
 function wristNear(lms: Lm[], target: { x: number; y: number }, th = 0.09): CheckResult {
   const w1 = lms[15], w2 = lms[16];
-  const ok = (w1 && dist(w1, target) < th) || (w2 && dist(w2, target) < th);
+  const ok = (visible(w1) && dist(w1, target) < th) || (visible(w2) && dist(w2, target) < th);
   return { ok: !!ok, targetXY: target };
 }
 
+function midpointIfVisible(a: Lm | undefined, b: Lm | undefined) {
+  return visible(a) && visible(b) ? avg(a, b) : null;
+}
+
 const PARTS: BodyPart[] = [
-  { id: "nose", label: "Nose", emoji: "👃", check: (l) => wristNear(l, l[0]) },
-  { id: "head", label: "Head", emoji: "🧠", check: (l) => wristNear(l, { x: l[0].x, y: l[0].y - 0.08 }) },
-  { id: "eyes", label: "Eyes", emoji: "👀", check: (l) => wristNear(l, avg(l[2], l[5])) },
-  { id: "ears", label: "Ears", emoji: "👂", check: (l) => wristNear(l, avg(l[7], l[8]), 0.1) },
-  { id: "mouth", label: "Mouth", emoji: "👄", check: (l) => wristNear(l, avg(l[9], l[10])) },
-  { id: "shoulders", label: "Shoulders", emoji: "💪", check: (l) => wristNear(l, avg(l[11], l[12]), 0.12) },
-  { id: "tummy", label: "Tummy", emoji: "🫃", check: (l) => wristNear(l, avg(l[23], l[24]), 0.12) },
-  { id: "knees", label: "Knees", emoji: "🦵", check: (l) => wristNear(l, avg(l[25], l[26]), 0.12) },
+  { id: "nose", label: "Nose", emoji: "👃", check: (l) => visible(l[0]) ? wristNear(l, l[0], 0.16) : { ok: false, targetXY: null } },
+  { id: "head", label: "Head", emoji: "🧠", check: (l) => visible(l[0]) ? wristNear(l, { x: l[0].x, y: l[0].y - 0.08 }, 0.19) : { ok: false, targetXY: null } },
+  { id: "eyes", label: "Eyes", emoji: "👀", check: (l) => { const p = midpointIfVisible(l[2], l[5]); return p ? wristNear(l, p, 0.16) : { ok: false, targetXY: null }; } },
+  { id: "ears", label: "Ears", emoji: "👂", check: (l) => { const p = midpointIfVisible(l[7], l[8]); return p ? wristNear(l, p, 0.17) : { ok: false, targetXY: null }; } },
+  { id: "mouth", label: "Mouth", emoji: "👄", check: (l) => { const p = midpointIfVisible(l[9], l[10]); return p ? wristNear(l, p, 0.16) : { ok: false, targetXY: null }; } },
+  { id: "shoulders", label: "Shoulders", emoji: "💪", check: (l) => { const p = midpointIfVisible(l[11], l[12]); return p ? wristNear(l, p, 0.17) : { ok: false, targetXY: null }; } },
+  { id: "tummy", label: "Tummy", emoji: "🫃", check: (l) => { const p = midpointIfVisible(l[23], l[24]); return p ? wristNear(l, p, 0.19) : { ok: false, targetXY: null }; } },
+  { id: "knees", label: "Knees", emoji: "🦵", check: (l) => { const p = midpointIfVisible(l[25], l[26]); return p ? wristNear(l, p, 0.19) : { ok: false, targetXY: null }; } },
   {
     id: "hands", label: "Hands together", emoji: "✋",
-    check: (l) => ({ ok: l[15] && l[16] ? dist(l[15], l[16]) < 0.08 : false, targetXY: l[15] && l[16] ? avg(l[15], l[16]) : null }),
+    check: (l) => {
+      const p = midpointIfVisible(l[15], l[16]);
+      return { ok: !!p && dist(l[15], l[16]) < 0.15, targetXY: p };
+    },
   },
   {
     id: "feet", label: "Toes", emoji: "🦶",
@@ -69,12 +79,11 @@ const PARTS: BodyPart[] = [
     check: (l) => {
       const w1 = l[15], w2 = l[16], a1 = l[27], a2 = l[28];
       const candidates: { x: number; y: number }[] = [];
-      if (w1 && a1) candidates.push({ d: dist(w1, a1), p: a1 } as never);
-      if (w1 && a2) candidates.push({ d: dist(w1, a2), p: a2 } as never);
-      if (w2 && a1) candidates.push({ d: dist(w2, a1), p: a1 } as never);
-      if (w2 && a2) candidates.push({ d: dist(w2, a2), p: a2 } as never);
+      const wrists = [w1, w2].filter((p): p is Lm => visible(p));
+      const ankles = [a1, a2].filter((p): p is Lm => visible(p));
+      for (const wrist of wrists) for (const ankle of ankles) candidates.push({ d: dist(wrist, ankle), p: ankle } as never);
       const best = (candidates as unknown as { d: number; p: Lm }[]).sort((x, y) => x.d - y.d)[0];
-      return { ok: !!best && best.d < 0.12, targetXY: best ? best.p : null };
+      return { ok: !!best && best.d < 0.2, targetXY: best ? best.p : null };
     },
   },
 ];
@@ -89,6 +98,7 @@ function SimonGame() {
   const [feedback, setFeedback] = useState<"" | "good" | "bad">("");
   const [celebrate, setCelebrate] = useState(false);
   const [poseReady, setPoseReady] = useState(false);
+  const [trackingError, setTrackingError] = useState<string | null>(null);
 
   const { videoRef, ready, error } = useCamera(true, "user");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -125,8 +135,19 @@ function SimonGame() {
     if (!ready) return;
     let raf = 0, running = true; let lastBad = 0;
     (async () => {
-      const lm = await getPoseLandmarker();
-      setPoseReady(true);
+      let lm: Awaited<ReturnType<typeof getPoseLandmarker>>;
+      try {
+        lm = await getPoseLandmarker();
+        if (!running) return;
+        setPoseReady(true);
+      } catch {
+        if (running) {
+          setPoseReady(false);
+          setTrackingError("Body tracking could not start. Check your connection and reload the game.");
+        }
+        return;
+      }
+      let lastInference = 0;
       const loop = () => {
         if (!running) return;
         const v = videoRef.current; const ctr = containerRef.current; const cvs = canvasRef.current;
@@ -134,8 +155,10 @@ function SimonGame() {
           const w = ctr.clientWidth, h = ctr.clientHeight;
           if (cvs.width !== w || cvs.height !== h) { cvs.width = w; cvs.height = h; }
           const ctx = cvs.getContext("2d");
-          try {
-            const res = lm.detectForVideo(v, performance.now());
+          const now = performance.now();
+          if (now - lastInference >= 33) try {
+            lastInference = now;
+            const res = lm.detectForVideo(v, now);
             const lms = (res.landmarks?.[0] ?? []) as Lm[];
             ctx?.clearRect(0, 0, w, h);
             if (ctx && lms.length) {
@@ -214,7 +237,8 @@ function SimonGame() {
           <video ref={videoRef} className="absolute inset-0 h-full w-full -scale-x-100 object-cover" playsInline muted />
           <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
           {error && <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-6 text-center text-white"><div><p className="text-display text-2xl font-bold">Camera needed</p><p className="mt-2 text-sm opacity-80">{error}</p></div></div>}
-          {!error && (!ready || !poseReady) && <div className="absolute inset-0 flex items-center justify-center"><CenterMessage title="Getting body tracking ready…" /></div>}
+          {!error && trackingError && <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-6 text-center text-white"><CenterMessage title="Tracking unavailable" sub={trackingError} /></div>}
+          {!error && !trackingError && (!ready || !poseReady) && <div className="absolute inset-0 flex items-center justify-center"><CenterMessage title="Getting body tracking ready…" /></div>}
           <div className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-white/90 px-5 py-2 text-display text-xl font-extrabold text-primary shadow-cartoon">
             {target.emoji} {promptText}
           </div>

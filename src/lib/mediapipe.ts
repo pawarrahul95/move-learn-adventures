@@ -50,6 +50,9 @@ export function getPoseLandmarker() {
         },
         runningMode: "VIDEO",
         numPoses: 1,
+        minPoseDetectionConfidence: 0.6,
+        minPosePresenceConfidence: 0.6,
+        minTrackingConfidence: 0.6,
       });
     })();
   }
