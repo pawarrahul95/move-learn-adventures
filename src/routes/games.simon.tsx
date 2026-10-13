@@ -98,6 +98,7 @@ function SimonGame() {
   const [feedback, setFeedback] = useState<"" | "good" | "bad">("");
   const [celebrate, setCelebrate] = useState(false);
   const [poseReady, setPoseReady] = useState(false);
+  const [trackingError, setTrackingError] = useState<string | null>(null);
 
   const { videoRef, ready, error } = useCamera(true, "user");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -134,13 +135,16 @@ function SimonGame() {
     if (!ready) return;
     let raf = 0, running = true; let lastBad = 0;
     (async () => {
-      let lm;
+      let lm: Awaited<ReturnType<typeof getPoseLandmarker>>;
       try {
         lm = await getPoseLandmarker();
         if (!running) return;
         setPoseReady(true);
       } catch {
-        if (running) setPoseReady(false);
+        if (running) {
+          setPoseReady(false);
+          setTrackingError("Body tracking could not start. Check your connection and reload the game.");
+        }
         return;
       }
       let lastInference = 0;
@@ -233,7 +237,8 @@ function SimonGame() {
           <video ref={videoRef} className="absolute inset-0 h-full w-full -scale-x-100 object-cover" playsInline muted />
           <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
           {error && <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-6 text-center text-white"><div><p className="text-display text-2xl font-bold">Camera needed</p><p className="mt-2 text-sm opacity-80">{error}</p></div></div>}
-          {!error && (!ready || !poseReady) && <div className="absolute inset-0 flex items-center justify-center"><CenterMessage title="Getting body tracking ready…" /></div>}
+          {!error && trackingError && <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-6 text-center text-white"><CenterMessage title="Tracking unavailable" sub={trackingError} /></div>}
+          {!error && !trackingError && (!ready || !poseReady) && <div className="absolute inset-0 flex items-center justify-center"><CenterMessage title="Getting body tracking ready…" /></div>}
           <div className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-white/90 px-5 py-2 text-display text-xl font-extrabold text-primary shadow-cartoon">
             {target.emoji} {promptText}
           </div>
