@@ -82,6 +82,15 @@ function letterTargetPoints(letter: string, w: number, h: number): { x: number; 
   return out;
 }
 
+function distanceToSegment(point: { x: number; y: number }, start: { x: number; y: number }, end: { x: number; y: number }) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared === 0) return Math.hypot(point.x - start.x, point.y - start.y);
+  const t = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared));
+  return Math.hypot(point.x - (start.x + t * dx), point.y - (start.y + t * dy));
+}
+
 function AlphabetGame() {
   const { active } = useProfiles();
   const [letterIdx, setLetterIdx] = useState(0);
@@ -91,7 +100,7 @@ function AlphabetGame() {
   // local webcam entirely. Otherwise use the page's own camera.
   const remote = tvStatus().kind === "paired";
   const { videoRef, ready, error } = useCamera(!remote, "user");
-  const { tip, modelReady } = useFingertip({
+  const { tipRef: trackedTipRef, modelReady } = useFingertip({
     mode: remote ? "remote" : "local",
     video: videoRef.current,
     ready,
@@ -103,6 +112,7 @@ function AlphabetGame() {
   const targetRef = useRef<{ x: number; y: number; hit: boolean }[]>([]);
   const trailRef = useRef<{ x: number; y: number }[]>([]);
   const fingertipRef = useRef<{ x: number; y: number } | null>(null);
+  const previousTipRef = useRef<{ x: number; y: number } | null>(null);
   const coverageRef = useRef(0);
 
   // Coverage updates UI ~5x/sec via rAF tick — avoids React renders per frame.
@@ -136,6 +146,7 @@ function AlphabetGame() {
       hit: false,
     }));
     trailRef.current = [];
+    previousTipRef.current = null;
     coverageRef.current = 0;
     setCoverage(0);
   }, [letter]);
@@ -152,11 +163,6 @@ function AlphabetGame() {
     setCelebrate(false);
     startTimeRef.current = performance.now();
   }, [letter]);
-
-  // Stash latest fingertip (normalized) in a ref so the rAF loop has access
-  // without re-running the effect every detection.
-  const tipRef = useRef(tip);
-  tipRef.current = tip;
 
   // Render loop. Reads fingertip from tipRef, paints, marks hits.
   useEffect(() => {
@@ -186,19 +192,25 @@ function AlphabetGame() {
           }
 
           // Project current fingertip onto canvas. Mirror X to match selfie view.
-          const t = tipRef.current;
+          const t = trackedTipRef.current;
           if (t.present) {
             const x = (1 - t.x) * rect.width;
             const y = t.y * rect.height;
+            const current = { x, y };
             fingertipRef.current = { x, y };
             trailRef.current.push({ x, y });
             if (trailRef.current.length > 60) trailRef.current.shift();
-            const r = 36;
+            const previous = previousTipRef.current;
+            const r = 34;
             for (const p of pts) {
-              if (!p.hit && (p.x - x) ** 2 + (p.y - y) ** 2 < r * r) p.hit = true;
+              if (!p.hit && (previous
+                ? distanceToSegment(p, previous, current) < r
+                : Math.hypot(p.x - x, p.y - y) < r)) p.hit = true;
             }
+            previousTipRef.current = current;
           } else {
             fingertipRef.current = null;
+            previousTipRef.current = null;
           }
 
           // Draw trail
@@ -263,7 +275,7 @@ function AlphabetGame() {
       running = false;
       cancelAnimationFrame(raf);
     };
-  }, [letter, active]);
+  }, [letter, active, trackedTipRef]);
 
   const next = () => {
     setCelebrate(false);
